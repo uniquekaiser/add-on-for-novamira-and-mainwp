@@ -2,6 +2,11 @@
 
 All notable changes to Novamira for MainWP are documented here.
 
+## 0.2.4 - 2026-08-04
+
+- [IMPROVE] Ensured future updates show the target release notes, WordPress and PHP requirements, and plugin icon before installation.
+- [DEV] Completed cross-version update verification against the published GitHub release asset.
+
 ## 0.2.3 - 2026-08-04
 
 - [FIX] Preserved the target release's notes when checking future GitHub updates.
