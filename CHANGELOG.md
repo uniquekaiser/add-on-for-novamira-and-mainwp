@@ -2,6 +2,11 @@
 
 All notable changes to Novamira for MainWP are documented here.
 
+## 0.2.3 - 2026-08-04
+
+- [FIX] Preserved the target release's notes when checking future GitHub updates.
+- [SECURITY] Restricted update-detail changelogs to categorized headings, lists, list items, and strong labels.
+
 ## 0.2.2 - 2026-08-04
 
 - [FIX] Added the WordPress requirement to fresh and cached update rows.

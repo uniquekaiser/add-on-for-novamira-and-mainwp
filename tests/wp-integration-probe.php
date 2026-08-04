@@ -60,7 +60,7 @@ $expected_tables = array(
 sort( $expected_tables );
 sort( $tables );
 if (
-	'0.2.2' !== $result['db_version']
+	'0.2.3' !== $result['db_version']
 	|| $expected_tables !== $tables
 	|| ! in_array( 'novamira-mainwp', $result['namespaces'], true )
 	|| 13 !== $result['novamira_fleet_ability_count']

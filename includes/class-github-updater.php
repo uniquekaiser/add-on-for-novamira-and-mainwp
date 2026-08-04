@@ -113,11 +113,16 @@ final class GitHub_Updater {
 		if ( empty( $sections['description'] ) ) {
 			$sections['description'] = '<p>Manage Novamira across MainWP child sites and route approved child MCP servers through one MainWP MCP connection.</p>';
 		}
-		$changelog = self::canonical_changelog_html();
-		if ( '' !== $changelog ) {
-			$sections['changelog'] = $changelog;
+		$remote_changelog = isset( $sections['changelog'] ) && is_string( $sections['changelog'] )
+			? self::normalize_changelog_html( $sections['changelog'] )
+			: '';
+		$local_changelog  = self::canonical_changelog_html();
+		if ( '' !== $remote_changelog ) {
+			$sections['changelog'] = $remote_changelog;
+		} elseif ( '' !== $local_changelog ) {
+			$sections['changelog'] = $local_changelog;
 		} elseif ( empty( $sections['changelog'] ) ) {
-			$sections['changelog'] = '<h4>0.2.2</h4><ul><li><strong>[FIX]</strong> Completed the WordPress update-row metadata.</li></ul>';
+			$sections['changelog'] = '<h4>0.2.3</h4><ul><li><strong>[FIX]</strong> Completed the WordPress update metadata.</li></ul>';
 		}
 		$info->sections = $sections;
 
@@ -200,5 +205,32 @@ final class GitHub_Updater {
 		}
 
 		return $html;
+	}
+
+	private static function normalize_changelog_html( string $html ): string {
+		$html = preg_replace( '/<h[1-6][^>]*>/i', '<h4>', $html );
+		$html = preg_replace( '/<\/h[1-6]>/i', '</h4>', (string) $html );
+		$html = preg_replace_callback(
+			'/<li[^>]*>\s*(?:<p[^>]*>\s*)?\[([A-Z]+)\]\s*(.*?)(?:\s*<\/p>)?\s*<\/li>/is',
+			static function ( array $matches ): string {
+				return '<li><strong>[' . htmlspecialchars( $matches[1], ENT_QUOTES, 'UTF-8' ) . ']</strong> ' . trim( $matches[2] ) . '</li>';
+			},
+			(string) $html
+		);
+		if ( function_exists( 'wp_kses' ) ) {
+			$html = wp_kses(
+				(string) $html,
+				array(
+					'h4'     => array(),
+					'ul'     => array(),
+					'li'     => array(),
+					'strong' => array(),
+				)
+			);
+		} else {
+			$html = strip_tags( (string) $html, '<h4><ul><li><strong>' );
+		}
+
+		return trim( (string) $html );
 	}
 }

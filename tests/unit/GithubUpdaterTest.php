@@ -14,7 +14,7 @@ final class GithubUpdaterTest extends TestCase {
 	/** @return array<string, array{string}> */
 	public function accepted_assets(): array {
 		return array(
-			'current'     => array( 'mainwp-novamira-addon-0.2.2.zip' ),
+			'current'     => array( 'mainwp-novamira-addon-0.2.3.zip' ),
 			'multi-digit' => array( 'mainwp-novamira-addon-12.34.56.zip' ),
 		);
 	}
@@ -50,7 +50,13 @@ final class GithubUpdaterTest extends TestCase {
 	}
 
 	public function test_update_metadata_is_complete(): void {
-		$info = GitHub_Updater::complete_metadata( (object) array() );
+		$info = GitHub_Updater::complete_metadata(
+			(object) array(
+				'sections' => array(
+					'changelog' => '<h1>0.2.4</h1><ul><li>[FIX] Future release note.</li></ul>',
+				),
+			)
+		);
 		self::assertIsObject( $info );
 		self::assertSame( 'mainwp-novamira-addon', $info->slug );
 		self::assertSame( '6.9', $info->requires );
@@ -60,6 +66,8 @@ final class GithubUpdaterTest extends TestCase {
 		self::assertArrayHasKey( 'description', $info->sections );
 		self::assertArrayHasKey( 'changelog', $info->sections );
 		self::assertStringContainsString( '<strong>[FIX]</strong>', $info->sections['changelog'] );
+		self::assertStringContainsString( '<h4>0.2.4</h4>', $info->sections['changelog'] );
+		self::assertStringContainsString( 'Future release note.', $info->sections['changelog'] );
 		self::assertStringNotContainsString( '<h1>', $info->sections['changelog'] );
 	}
 

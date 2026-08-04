@@ -4,7 +4,7 @@
 declare( strict_types=1 );
 
 define( 'ABSPATH', __DIR__ . '/tmp-wordpress/' );
-define( 'NOVAMIRA_MAINWP_VERSION', '0.2.2' );
+define( 'NOVAMIRA_MAINWP_VERSION', '0.2.3' );
 define( 'NOVAMIRA_MAINWP_DIR', dirname( __DIR__ ) . '/' );
 define( 'NOVAMIRA_MAINWP_FILE', dirname( __DIR__ ) . '/mainwp-novamira-addon.php' );
 define( 'ARRAY_A', 'ARRAY_A' );
@@ -85,6 +85,7 @@ function do_action( string $hook, ...$args ): void { $GLOBALS['nmm_actions'][] =
 function wp_register_ability( string $name, array $args ): void { $GLOBALS['nmm_abilities'][ $name ] = $args; }
 function current_user_can( string $capability ): bool { return true; }
 function esc_html__( string $text, string $domain = 'default' ): string { return $text; }
+function wp_kses( string $html, array $allowed_html ): string { return strip_tags( $html, '<h4><ul><li><strong>' ); }
 function sanitize_key( string $value ): string { return strtolower( (string) preg_replace( '/[^a-z0-9_\-]/i', '', $value ) ); }
 function sanitize_text_field( string $value ): string { return trim( strip_tags( $value ) ); }
 function sanitize_textarea_field( string $value ): string { return trim( strip_tags( $value ) ); }

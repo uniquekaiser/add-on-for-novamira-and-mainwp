@@ -4,7 +4,7 @@ Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.2.2
+Stable tag: 0.2.3
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -31,6 +31,10 @@ Official packages update from the public GitHub Releases page. Only the exact ve
 5. Create a one-time Dashboard application password on Connect and add the displayed MainWP profile to the AI client.
 
 == Changelog ==
+
+= 0.2.3 =
+* [FIX] Preserved the target release's notes when checking future GitHub updates.
+* [SECURITY] Restricted update-detail changelogs to categorized headings, lists, list items, and strong labels.
 
 = 0.2.2 =
 * [FIX] Added the WordPress requirement to fresh and cached update rows.
