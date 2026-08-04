@@ -2,6 +2,12 @@
 
 All notable changes to Novamira for MainWP are documented here.
 
+## 0.2.1 - 2026-08-04
+
+- [NEW] Published the first public GitHub release of the Dashboard fleet control plane, child companion, and routed MCP gateway.
+- [SECURITY] Added exact-asset dashboard updates that reject source archives, prereleases, and unrelated ZIP files.
+- [FIX] Made distribution inspection portable across Windows and Linux release runners.
+
 ## 0.2.0 - 2026-08-04
 
 - [NEW] Added a Dashboard fleet control plane for status, policies, package deployment, encrypted credentials, auditing, and provider connection profiles.

@@ -50,8 +50,10 @@ const archive = (workingDirectory, slug, target) => {
 };
 
 const inspect = (target, slug, main) => {
-  const tar = process.platform === 'win32' ? 'tar.exe' : 'tar';
-  const entries = execFileSync(tar, ['-tf', target], { encoding: 'utf8' })
+  const inspector = process.platform === 'win32'
+    ? { command: 'tar.exe', args: ['-tf', target] }
+    : { command: 'unzip', args: ['-Z1', target] };
+  const entries = execFileSync(inspector.command, inspector.args, { encoding: 'utf8' })
     .split(/\r?\n/)
     .filter(Boolean);
   if (!entries.includes(`${slug}/${main}`)) {

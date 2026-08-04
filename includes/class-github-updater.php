@@ -113,7 +113,7 @@ final class GitHub_Updater {
 			$sections['description'] = '<p>Manage Novamira across MainWP child sites and route approved child MCP servers through one MainWP MCP connection.</p>';
 		}
 		if ( empty( $sections['changelog'] ) ) {
-			$sections['changelog'] = '<h4>0.2.0</h4><ul><li><strong>[NEW]</strong> Added the independently deployable child companion and routed fleet MCP gateway.</li><li><strong>[SECURITY]</strong> Added request-scoped AI leases, encrypted managed credentials, and fail-closed routing policies.</li><li><strong>[DEV]</strong> Added exact-asset GitHub Release updates with packaged runtime verification.</li></ul>';
+			$sections['changelog'] = '<h4>0.2.1</h4><ul><li><strong>[NEW]</strong> Published the first public release of the Dashboard fleet control plane, child companion, and routed MCP gateway.</li><li><strong>[SECURITY]</strong> Added exact-asset dashboard updates that reject source archives and unrelated ZIP files.</li><li><strong>[FIX]</strong> Made distribution inspection portable across Windows and Linux release runners.</li></ul>';
 		}
 		$info->sections = $sections;
 

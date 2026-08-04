@@ -4,7 +4,7 @@ Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -31,6 +31,11 @@ Official packages update from the public GitHub Releases page. Only the exact ve
 5. Create a one-time Dashboard application password on Connect and add the displayed MainWP profile to the AI client.
 
 == Changelog ==
+
+= 0.2.1 =
+* [NEW] Published the first public GitHub release of the Dashboard fleet control plane, child companion, and routed MCP gateway.
+* [SECURITY] Added exact-asset dashboard updates that reject source archives, prereleases, and unrelated ZIP files.
+* [FIX] Made distribution inspection portable across Windows and Linux release runners.
 
 = 0.2.0 =
 * [NEW] Added the Dashboard fleet control plane, independently deployable child companion, and routed MCP gateway.
