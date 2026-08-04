@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Validate source and tests
+        run: |
+          composer validate --strict
+          composer test
+          composer phpcs
+          composer phpstan
+
+      - name: Build audited distribution
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          grep -Eq "^[[:space:]]*\*[[:space:]]*Version:[[:space:]]+${VERSION}$" mainwp-novamira-addon.php
+          grep -Eq "^Stable tag:[[:space:]]+${VERSION}$" readme.txt
+          # Generate release-notes from CHANGELOG.md.
+          node tools/extract-release-notes.mjs "$VERSION" "dist/release-notes-${VERSION}.md"
+          node tools/build-dist.mjs
+          test -f "dist/mainwp-novamira-addon-${VERSION}.zip"
+
+      - name: Publish exact release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/mainwp-novamira-addon-${VERSION}.zip" \
+            --verify-tag \
+            --title "Novamira for MainWP ${VERSION}" \
+            --notes-file "dist/release-notes-${VERSION}.md"

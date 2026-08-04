@@ -1,0 +1,19 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 5
+    parallel:
+        maximumNumberOfProcesses: 1
+    paths:
+        - mainwp-novamira-addon.php
+        - includes
+    excludePaths:
+        analyse:
+            - tests
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
+    bootstrapFiles:
+        - tests/phpstan/bootstrap.php
+    scanFiles:
+        - tests/phpstan/mainwp-stubs.php

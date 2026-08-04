@@ -1,0 +1,9 @@
+/dist/
+/vendor/
+/.phpunit.result.cache
+/.phpcs-cache
+/.phpstan.cache
+/.idea/
+/.vscode/
+Thumbs.db
+.DS_Store

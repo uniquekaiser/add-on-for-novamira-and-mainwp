@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Novamira for MainWP</title>
+  <desc id="desc">A connected star and site network on a dark blue tile.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#102a43"/>
+      <stop offset="1" stop-color="#243b53"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5eead4"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="48" fill="url(#background)"/>
+  <path d="M128 50l14 34 37 3-28 24 9 36-32-19-32 19 9-36-28-24 37-3z" fill="url(#accent)"/>
+  <path d="M128 139v31M128 170L77 198M128 170l51 28" fill="none" stroke="#e0f2fe" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="77" cy="198" r="19" fill="#5eead4"/>
+  <circle cx="128" cy="170" r="16" fill="#38bdf8"/>
+  <circle cx="179" cy="198" r="19" fill="#5eead4"/>
+</svg>
