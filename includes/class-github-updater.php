@@ -53,6 +53,7 @@ final class GitHub_Updater {
 		$api->enableReleaseAssets( self::ASSET_PATTERN, 2 );
 		$checker->addFilter( 'vcs_update_detection_strategies', array( self::class, 'latest_release_only' ) );
 		$checker->addFilter( 'request_info_result', array( self::class, 'complete_metadata' ) );
+		add_filter( 'site_transient_update_plugins', array( self::class, 'complete_update_transient' ), 100 );
 		self::$checker = $checker;
 	}
 
@@ -112,11 +113,92 @@ final class GitHub_Updater {
 		if ( empty( $sections['description'] ) ) {
 			$sections['description'] = '<p>Manage Novamira across MainWP child sites and route approved child MCP servers through one MainWP MCP connection.</p>';
 		}
-		if ( empty( $sections['changelog'] ) ) {
-			$sections['changelog'] = '<h4>0.2.1</h4><ul><li><strong>[NEW]</strong> Published the first public release of the Dashboard fleet control plane, child companion, and routed MCP gateway.</li><li><strong>[SECURITY]</strong> Added exact-asset dashboard updates that reject source archives and unrelated ZIP files.</li><li><strong>[FIX]</strong> Made distribution inspection portable across Windows and Linux release runners.</li></ul>';
+		$changelog = self::canonical_changelog_html();
+		if ( '' !== $changelog ) {
+			$sections['changelog'] = $changelog;
+		} elseif ( empty( $sections['changelog'] ) ) {
+			$sections['changelog'] = '<h4>0.2.2</h4><ul><li><strong>[FIX]</strong> Completed the WordPress update-row metadata.</li></ul>';
 		}
 		$info->sections = $sections;
 
 		return $info;
+	}
+
+	/** @param mixed $transient @return mixed */
+	public static function complete_update_transient( $transient ) {
+		if ( ! is_object( $transient ) ) {
+			return $transient;
+		}
+
+		$key = 'mainwp-novamira-addon/mainwp-novamira-addon.php';
+		foreach ( array( 'response', 'no_update' ) as $bucket ) {
+			if ( ! isset( $transient->{$bucket} ) || ! is_array( $transient->{$bucket} ) || ! isset( $transient->{$bucket}[ $key ] ) ) {
+				continue;
+			}
+			$entry = $transient->{$bucket}[ $key ];
+			if ( is_object( $entry ) ) {
+				$entry->requires     = '6.9';
+				$entry->requires_php = '7.4';
+				$entry->icons        = self::complete_icons( isset( $entry->icons ) ? (array) $entry->icons : array() );
+			} elseif ( is_array( $entry ) ) {
+				$entry['requires']     = '6.9';
+				$entry['requires_php'] = '7.4';
+				$entry['icons']        = self::complete_icons( isset( $entry['icons'] ) ? (array) $entry['icons'] : array() );
+			}
+			$transient->{$bucket}[ $key ] = $entry;
+		}
+
+		return $transient;
+	}
+
+	/** @param array<string, string> $icons @return array<string, string> */
+	private static function complete_icons( array $icons ): array {
+		$icon = 'https://raw.githubusercontent.com/uniquekaiser/novamira-for-mainwp/main/assets/icon.svg';
+		return array_merge(
+			array(
+				'1x'  => $icon,
+				'2x'  => $icon,
+				'svg' => $icon,
+			),
+			$icons
+		);
+	}
+
+	private static function canonical_changelog_html(): string {
+		$contents = file_get_contents( NOVAMIRA_MAINWP_DIR . 'CHANGELOG.md' );
+		if ( ! is_string( $contents ) || '' === trim( $contents ) ) {
+			return '';
+		}
+
+		$sections = array();
+		$current  = '';
+		$lines    = preg_split( '/\r?\n/', $contents );
+		if ( ! is_array( $lines ) ) {
+			return '';
+		}
+		foreach ( $lines as $line ) {
+			if ( preg_match( '/^##\s+(\d+\.\d+\.\d+)(?:\s+-.*)?$/', $line, $matches ) ) {
+				$current              = $matches[1];
+				$sections[ $current ] = array();
+				continue;
+			}
+			if ( '' !== $current && preg_match( '/^-\s+\[([A-Z]+)\]\s+(.+)$/', $line, $matches ) ) {
+				$sections[ $current ][] = array( $matches[1], $matches[2] );
+			}
+		}
+
+		$html = '';
+		foreach ( $sections as $version => $items ) {
+			if ( empty( $items ) ) {
+				continue;
+			}
+			$html .= '<h4>' . htmlspecialchars( $version, ENT_QUOTES, 'UTF-8' ) . '</h4><ul>';
+			foreach ( $items as $item ) {
+				$html .= '<li><strong>[' . htmlspecialchars( $item[0], ENT_QUOTES, 'UTF-8' ) . ']</strong> ' . htmlspecialchars( $item[1], ENT_QUOTES, 'UTF-8' ) . '</li>';
+			}
+			$html .= '</ul>';
+		}
+
+		return $html;
 	}
 }

@@ -14,7 +14,7 @@ final class GithubUpdaterTest extends TestCase {
 	/** @return array<string, array{string}> */
 	public function accepted_assets(): array {
 		return array(
-			'current'     => array( 'mainwp-novamira-addon-0.2.1.zip' ),
+			'current'     => array( 'mainwp-novamira-addon-0.2.2.zip' ),
 			'multi-digit' => array( 'mainwp-novamira-addon-12.34.56.zip' ),
 		);
 	}
@@ -59,5 +59,21 @@ final class GithubUpdaterTest extends TestCase {
 		self::assertStringEndsWith( '/assets/icon.svg', $info->icons['svg'] );
 		self::assertArrayHasKey( 'description', $info->sections );
 		self::assertArrayHasKey( 'changelog', $info->sections );
+		self::assertStringContainsString( '<strong>[FIX]</strong>', $info->sections['changelog'] );
+		self::assertStringNotContainsString( '<h1>', $info->sections['changelog'] );
+	}
+
+	public function test_fresh_and_cached_update_rows_receive_complete_metadata(): void {
+		$key       = 'mainwp-novamira-addon/mainwp-novamira-addon.php';
+		$transient = (object) array(
+			'response' => array( $key => (object) array( 'icons' => array() ) ),
+			'no_update' => array( $key => array() ),
+		);
+
+		$result = GitHub_Updater::complete_update_transient( $transient );
+		self::assertSame( '6.9', $result->response[ $key ]->requires );
+		self::assertSame( '7.4', $result->response[ $key ]->requires_php );
+		self::assertStringEndsWith( '/assets/icon.svg', $result->response[ $key ]->icons['svg'] );
+		self::assertSame( '6.9', $result->no_update[ $key ]['requires'] );
 	}
 }

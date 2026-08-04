@@ -2,6 +2,11 @@
 
 All notable changes to Novamira for MainWP are documented here.
 
+## 0.2.2 - 2026-08-04
+
+- [FIX] Added the WordPress requirement to fresh and cached update rows.
+- [IMPROVE] Normalized update details to categorized, update-safe changelog HTML generated from the canonical changelog.
+
 ## 0.2.1 - 2026-08-04
 
 - [NEW] Published the first public GitHub release of the Dashboard fleet control plane, child companion, and routed MCP gateway.
