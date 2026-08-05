@@ -122,7 +122,7 @@ final class GitHub_Updater {
 		} elseif ( '' !== $local_changelog ) {
 			$sections['changelog'] = $local_changelog;
 		} elseif ( empty( $sections['changelog'] ) ) {
-			$sections['changelog'] = '<h4>0.4.0</h4><ul><li><strong>[IMPROVE]</strong> Added live child-state visibility and Dashboard-sourced Pro packages.</li></ul>';
+			$sections['changelog'] = '<h4>0.5.0</h4><ul><li><strong>[FIX]</strong> Added isolated per-site fleet processing and direct configuration exports.</li></ul>';
 		}
 		$info->sections = $sections;
 

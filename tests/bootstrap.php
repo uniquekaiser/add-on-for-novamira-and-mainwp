@@ -4,7 +4,7 @@
 declare( strict_types=1 );
 
 define( 'ABSPATH', __DIR__ . '/tmp-wordpress/' );
-define( 'NOVAMIRA_MAINWP_VERSION', '0.4.0' );
+define( 'NOVAMIRA_MAINWP_VERSION', '0.5.0' );
 define( 'NOVAMIRA_MAINWP_DIR', dirname( __DIR__ ) . '/' );
 define( 'NOVAMIRA_MAINWP_FILE', dirname( __DIR__ ) . '/mainwp-novamira-addon.php' );
 define( 'ARRAY_A', 'ARRAY_A' );
@@ -63,6 +63,8 @@ class NMM_Test_MainWP_DB {
 }
 class NMM_Test_MainWP_Utility {
 	public static function can_edit_website( $site ): bool { return is_object( $site ) && empty( $site->forbidden ); }
+	public static function get_mainwp_dir(): array { return array( sys_get_temp_dir() ); }
+	public static function get_download_sig( string $path ): string { return hash( 'sha256', $path ); }
 }
 class_alias( NMM_Test_MainWP_DB::class, 'MainWP\\Dashboard\\MainWP_DB' );
 class_alias( NMM_Test_MainWP_Utility::class, 'MainWP\\Dashboard\\MainWP_System_Utility' );
@@ -98,6 +100,8 @@ function wp_generate_uuid4(): string { ++$GLOBALS['nmm_uuid']; return sprintf( '
 function wp_salt( string $scheme = 'auth' ): string { return 'unit-test-salt-' . $scheme; }
 function wp_parse_url( string $url, int $component = -1 ) { return parse_url( $url, $component ); }
 function home_url( string $path = '' ): string { return 'https://dashboard.test' . $path; }
+function admin_url( string $path = '' ): string { return 'https://dashboard.test/wp-admin/' . ltrim( $path, '/' ); }
+function wp_normalize_path( string $path ): string { return str_replace( '\\', '/', $path ); }
 function trailingslashit( string $value ): string { return rtrim( $value, '/\\' ) . '/'; }
 function wp_get_environment_type(): string { return 'production'; }
 function wp_rand( int $min = 0, int $max = 0 ): int { return 42; }
@@ -152,6 +156,7 @@ function nmm_child_response( array $params, array $data = array(), bool $ok = tr
 	return array( 'status' => 'SUCCESS', 'result' => "\nNOVAMIRA_MAINWP_RESULT:" . base64_encode( wp_json_encode( $body ) ) . "\n" );
 }
 require_once dirname( __DIR__ ) . '/includes/provider-config-registry.php';
+require_once dirname( __DIR__ ) . '/includes/class-config-export.php';
 require_once dirname( __DIR__ ) . '/includes/class-github-updater.php';
 require_once dirname( __DIR__ ) . '/includes/class-crypto.php';
 require_once dirname( __DIR__ ) . '/includes/class-storage.php';

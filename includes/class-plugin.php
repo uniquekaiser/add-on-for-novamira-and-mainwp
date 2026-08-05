@@ -31,6 +31,9 @@ final class Plugin {
 		add_action( 'wp_abilities_api_categories_init', array( Abilities::class, 'register_category' ) );
 		add_action( 'wp_abilities_api_init', array( Abilities::class, 'register' ) );
 		add_action( 'admin_notices', array( self::class, 'dependency_notice' ) );
+		add_action( 'admin_enqueue_scripts', array( Admin::class, 'enqueue_assets' ) );
+		add_action( 'wp_ajax_novamira_mainwp_bulk_site', array( Admin::class, 'ajax_bulk_site' ) );
+		add_action( 'admin_post_novamira_mainwp_export_configs', array( Admin::class, 'download_fleet_configs' ) );
 		add_action( 'novamira_mainwp_runtime_cleanup', array( Runtime_Access::class, 'cleanup' ), 10, 2 );
 		Runtime_Access::recover_expired();
 	}

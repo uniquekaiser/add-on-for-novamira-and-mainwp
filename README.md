@@ -11,12 +11,12 @@ This is an independent integration project and is not maintained by or affiliate
 - WordPress 6.9 or newer
 - PHP 7.4 or newer on the MainWP Dashboard
 - MainWP Dashboard and MainWP Child 6.0 or newer
-- MainWP MCP Bridge 0.3.0 or newer on the Dashboard
+- [MainWP MCP Bridge 0.3.0 or newer](https://github.com/uniquekaiser/mainwp-mcp-bridge) on the Dashboard
 - An upstream Novamira Free release supported by the add-on (1.11.1 or newer)
 
 ## Deployment order
 
-1. Install the add-on and MainWP MCP Bridge on the Dashboard.
+1. Install the add-on and [MainWP MCP Bridge](https://github.com/uniquekaiser/mainwp-mcp-bridge) on the Dashboard.
 2. Use Fleet to install or activate upstream Novamira Free on selected MainWP sites. The add-on validates the HTTPS metadata and package before MainWP deploys it.
 3. Optionally upload an audited Novamira Pro ZIP on Packages.
 4. Approve production access per site, create managed child credentials, and create the one-time Dashboard MCP profile.
@@ -31,13 +31,13 @@ Audit records contain only actor, site, operation, outcome, duration, correlatio
 
 ## MCP gateway
 
-The add-on registers the `novamira-mainwp` ability namespace. MainWP MCP Bridge includes it in dedicated and shared-server exposure modes while preserving the bridge's policies, rate limits, resources, prompts, and confirmation tokens. The add-on routes tools, resources, and prompts to a selected child without flattening every child's catalog into the Dashboard schema.
+The add-on registers the `novamira-mainwp` ability namespace. [MainWP MCP Bridge](https://github.com/uniquekaiser/mainwp-mcp-bridge) includes it in dedicated and shared-server exposure modes while preserving the bridge's policies, rate limits, resources, prompts, and confirmation tokens. The add-on routes tools, resources, and prompts to a selected child without flattening every child's catalog into the Dashboard schema.
 
-The Connect screen's provider templates are maintained by this add-on and use the same configuration shapes users expect from Novamira. They do not require or modify Novamira's Connect page.
+The Connect screen's provider templates are maintained by this add-on and use the same configuration shapes users expect from Novamira. They do not require or modify Novamira's Connect page. It can also download a single direct-child configuration in any supported client format as an emergency backup. That export contains plaintext child application passwords, excludes sites without managed credentials, and should be stored encrypted.
 
 ## Pro behavior
 
-Pro is optional. Administrators may build the child package from the Novamira Pro copy installed on the MainWP Dashboard or upload a release ZIP that passes root, path, plugin-header, and version checks, then configure an encrypted default license or per-site override. Missing, invalid, expired, or unreachable Pro licensing does not disable or change Novamira Free.
+Pro is optional. Administrators may build the child package from the Novamira Pro copy installed on the MainWP Dashboard or upload a release ZIP that passes root, path, plugin-header, and version checks, then configure an encrypted default license or per-site override. The combined fleet action installs the package, activates the WordPress plugin, and activates that stored license independently for each selected site. Missing, invalid, expired, or unreachable Pro licensing does not disable or change Novamira Free.
 
 ## Distribution build
 

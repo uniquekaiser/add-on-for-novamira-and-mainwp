@@ -2,6 +2,15 @@
 
 All notable changes to Novamira for MainWP are documented here.
 
+## 0.5.0 - 2026-08-05
+
+- [NEW] Added select-all controls and a guided installation check for child sites missing Novamira Free.
+- [NEW] Added downloadable direct child MCP server configurations for Codex, Claude, Cursor, VS Code, Gemini, and the other supported provider templates.
+- [IMPROVE] Added explicit Pro install-only, plugin-and-license activation, and combined install-and-activate workflows with stage-specific site errors.
+- [FIX] Replaced synchronous fleet submissions with bounded per-site requests so a slow, failed, or timed-out child is isolated and remaining sites continue.
+- [SECURITY] Marked direct configuration exports as sensitive plaintext credential backups and omitted sites without managed credentials.
+- [IMPROVE] Linked MainWP MCP Bridge documentation to its canonical public repository.
+
 ## 0.4.0 - 2026-08-05
 
 - [NEW] Added a switch between an automatically rebuilt package from the Dashboard's installed Novamira Pro copy and an administrator-uploaded audited Pro ZIP.

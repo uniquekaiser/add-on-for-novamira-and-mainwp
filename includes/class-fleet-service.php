@@ -225,7 +225,7 @@ final class Fleet_Service {
 	 * @return array<string, mixed>
 	 */
 	public static function provision( array $site_ids, string $operation, bool $dry_run ): array {
-		$allowed = array( 'refresh-status', 'repair-free', 'install-free', 'activate-free', 'update-free', 'enable-ai', 'disable-ai', 'install-pro', 'activate-pro', 'update-pro' );
+		$allowed = array( 'refresh-status', 'repair-free', 'install-free', 'activate-free', 'update-free', 'enable-ai', 'disable-ai', 'install-pro', 'install-activate-pro', 'activate-pro', 'update-pro' );
 		if ( ! in_array( $operation, $allowed, true ) ) {
 			return array( 'error' => 'Unsupported provisioning operation.' );
 		}
@@ -437,13 +437,38 @@ final class Fleet_Service {
 			return MainWP_Client::update_plugin( $site_id, self::FREE_PLUGIN );
 		}
 		if ( 'activate-pro' === $operation ) {
-			return MainWP_Client::activate_plugin( $site_id, self::PRO_PLUGIN );
+			$activated = MainWP_Client::activate_plugin( $site_id, self::PRO_PLUGIN );
+			if ( is_wp_error( $activated ) ) {
+				return new \WP_Error( $activated->get_error_code(), 'Pro plugin activation failed: ' . $activated->get_error_message() );
+			}
+			$licensed = self::manage_pro_license( $site_id, 'activate' );
+			if ( is_wp_error( $licensed ) ) {
+				return new \WP_Error( $licensed->get_error_code(), 'The Pro plugin is active, but license activation failed: ' . $licensed->get_error_message() );
+			}
+			return array(
+				'plugin'  => $activated,
+				'license' => $licensed,
+			);
 		}
 		$package = Pro_Package::active();
 		if ( is_wp_error( $package ) ) {
 			return $package;
 		}
-		return MainWP_Client::install_plugin( $site_id, (string) $package['download_url'], true, 'update-pro' === $operation );
+		if ( 'install-activate-pro' === $operation ) {
+			$installed = MainWP_Client::install_plugin( $site_id, (string) $package['download_url'], true, false );
+			if ( is_wp_error( $installed ) ) {
+				return new \WP_Error( $installed->get_error_code(), 'Pro installation or plugin activation failed: ' . $installed->get_error_message() );
+			}
+			$licensed = self::manage_pro_license( $site_id, 'activate' );
+			if ( is_wp_error( $licensed ) ) {
+				return new \WP_Error( $licensed->get_error_code(), 'The Pro plugin is installed and active, but license activation failed: ' . $licensed->get_error_message() );
+			}
+			return array(
+				'plugin'  => $installed,
+				'license' => $licensed,
+			);
+		}
+		return MainWP_Client::install_plugin( $site_id, (string) $package['download_url'], 'update-pro' === $operation, 'update-pro' === $operation );
 	}
 
 	/** @return array<string, mixed>|\WP_Error */
