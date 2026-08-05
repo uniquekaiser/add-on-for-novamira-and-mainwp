@@ -72,7 +72,7 @@ final class Admin {
 			}
 			?>
 		</div>
-		<style>.novamira-mainwp .nmm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem}.novamira-mainwp pre{white-space:pre-wrap;overflow:auto;max-height:420px}.novamira-mainwp .nmm-actions{display:flex;gap:.4rem;flex-wrap:wrap}.novamira-mainwp .nmm-actions form{margin:0}.novamira-mainwp .nmm-ok{color:#16833d;font-weight:600}.novamira-mainwp .nmm-bad{color:#b42318;font-weight:600}.novamira-mainwp textarea{width:100%;font-family:monospace}.novamira-mainwp .nmm-summary{margin:1.5rem 0}.novamira-mainwp .nmm-filters{margin-bottom:1rem}.novamira-mainwp table small{overflow-wrap:anywhere}</style>
+		<style>.novamira-mainwp .nmm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem}.novamira-mainwp pre{white-space:pre-wrap;overflow:auto;max-height:420px}.novamira-mainwp .nmm-actions{display:flex;gap:.4rem;flex-wrap:wrap}.novamira-mainwp .nmm-actions form{margin:0}.novamira-mainwp .nmm-ok{color:#16833d;font-weight:600}.novamira-mainwp .nmm-bad{color:#b42318;font-weight:600}.novamira-mainwp .nmm-muted{color:#667085}.novamira-mainwp textarea{width:100%;font-family:monospace}.novamira-mainwp .nmm-summary{margin:1.5rem 0}.novamira-mainwp .nmm-filters{margin-bottom:1rem}.novamira-mainwp table small{overflow-wrap:anywhere}</style>
 		<?php
 		do_action( 'mainwp_pagefooter_extensions', NOVAMIRA_MAINWP_FILE );
 	}
@@ -134,6 +134,16 @@ final class Admin {
 		} elseif ( 'save-default-license' === $action ) {
 			$license      = isset( $_POST['license_key'] ) ? sanitize_text_field( wp_unslash( $_POST['license_key'] ) ) : '';
 			self::$result = Storage::set_default_pro_license( $license );
+		} elseif ( 'save-pro-source' === $action ) {
+			$source = isset( $_POST['pro_package_source'] ) && 'dashboard' === sanitize_key( wp_unslash( $_POST['pro_package_source'] ) ) ? 'dashboard' : 'upload';
+			$result = 'dashboard' === $source ? Pro_Package::sync_dashboard( true ) : array( 'source' => 'upload' );
+			if ( is_wp_error( $result ) ) {
+				self::$result = $result;
+			} elseif ( ! Storage::set_pro_package_source( $source ) ) {
+				self::$result = new \WP_Error( 'novamira_mainwp_pro_source_invalid', 'The Pro package source could not be saved.' );
+			} else {
+				self::$result = $result;
+			}
 		} elseif ( 'upload-pro' === $action ) {
 			self::$result = self::upload_package( 'pro' );
 		} elseif ( 'create-dashboard-credential' === $action ) {
@@ -215,20 +225,30 @@ final class Admin {
 						"><?php echo esc_html( $label ); ?></a>
 		<?php endforeach; ?>
 		</div>
-		<form method="post" id="nmm-bulk-fleet" class="ui form segment"><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="provision"><div class="inline fields"><label><?php esc_html_e( 'Bulk action', 'mainwp-novamira-addon' ); ?></label><select name="operation"><option value="install-free">Install and activate Free</option><option value="activate-free">Activate Free</option><option value="update-free">Update Free</option><option value="repair-free">Repair Free from upstream</option><option value="enable-ai">Enable AI abilities</option><option value="disable-ai">Disable AI abilities</option><option value="rotate-credential">Create/rotate credentials</option><option value="revoke-credential">Revoke credentials</option><option value="install-pro">Install optional Pro</option><option value="activate-pro">Activate optional Pro</option><option value="update-pro">Update optional Pro</option></select><button class="ui button" type="submit" name="dry_run" value="1"><i class="eye icon"></i>Preview</button><button class="ui green button" type="submit" onclick="return window.confirm('Run this action on every selected site?')"><i class="play icon"></i>Confirm and run</button></div></form>
+		<form method="post" id="nmm-bulk-fleet" class="ui form segment"><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="provision"><div class="inline fields"><label><?php esc_html_e( 'Bulk action', 'mainwp-novamira-addon' ); ?></label><select name="operation"><option value="refresh-status">Refresh live Novamira status</option><option value="install-free">Install and activate Free</option><option value="activate-free">Activate Free</option><option value="update-free">Update Free</option><option value="repair-free">Repair Free from upstream</option><option value="enable-ai">Enable AI abilities</option><option value="disable-ai">Disable AI abilities</option><option value="rotate-credential">Create/rotate credentials</option><option value="revoke-credential">Revoke credentials</option><option value="install-pro">Install optional Pro</option><option value="activate-pro">Activate optional Pro</option><option value="update-pro">Update optional Pro</option></select><button class="ui button" type="submit" name="dry_run" value="1"><i class="eye icon"></i>Preview</button><button class="ui green button" type="submit" onclick="return window.confirm('Run this action on every selected site?')"><i class="play icon"></i>Confirm and run</button></div></form>
 		<?php if ( empty( $sites ) ) : ?>
 			<div class="ui placeholder segment"><div class="ui icon header"><i class="plug icon"></i><?php esc_html_e( 'No sites match this view.', 'mainwp-novamira-addon' ); ?></div></div>
 		<?php else : ?>
 		<table class="ui compact celled selectable table"><thead><tr><th><span class="screen-reader-text">Select</span></th><th>Site</th><th>Novamira Free</th><th>Pro / license</th><th>AI / policy</th><th>Credential</th><th>Abilities</th><th>Last call</th><th>Quick actions</th></tr></thead><tbody>
-			<?php foreach ( $sites as $site ) : ?>
+			<?php
+			foreach ( $sites as $site ) :
+				$status_known = ! empty( $site['status_known'] );
+				$site_admin   = add_query_arg(
+					array(
+						'page'      => 'managesites',
+						'dashboard' => (int) $site['id'],
+					),
+					admin_url( 'admin.php' )
+				);
+				?>
 			<tr>
 				<td><input form="nmm-bulk-fleet" type="checkbox" name="site_ids[]" value="<?php echo esc_attr( (string) $site['id'] ); ?>" aria-label="Select <?php echo esc_attr( (string) $site['name'] ); ?>"></td>
-				<td><strong><?php echo esc_html( $site['name'] ); ?></strong><br><small><a href="<?php echo esc_url( $site['url'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $site['url'] ); ?></a></small><?php echo ! empty( $site['sync_error'] ) ? '<br><span class="nmm-bad">Sync issue</span>' : ''; ?></td>
+				<td><strong><a href="<?php echo esc_url( $site_admin ); ?>"><?php echo esc_html( $site['name'] ); ?></a></strong><br><small><a href="<?php echo esc_url( $site['url'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $site['url'] ); ?></a></small><?php echo ! empty( $site['sync_error'] ) ? '<br><span class="nmm-bad">Sync issue</span>' : ''; ?><br><small><?php echo $status_known ? 'Live settings checked ' . esc_html( (string) $site['status_updated_at'] ) . ' UTC' : '<span class="nmm-muted">Live settings not checked yet</span>'; ?></small></td>
 				<td><?php echo esc_html( self::plugin_state( $site['free'] ) ); ?><?php echo ! empty( $site['free']['update_available'] ) ? '<br><span class="ui tiny orange label">Update ' . esc_html( (string) $site['free']['update_version'] ) . '</span>' : ''; ?></td>
-				<td><?php echo esc_html( self::plugin_state( $site['pro'] ) ); ?><br><small><?php echo ! empty( $site['pro']['license_active'] ) ? '<span class="nmm-ok">Licensed</span>' : 'Optional / not licensed'; ?></small></td>
-				<td><?php echo ! empty( $site['ai']['manual_enabled'] ) ? '<span class="nmm-ok">Enabled</span>' : 'Off'; ?><br><small><?php echo esc_html( (string) $site['policy']['ai_lifecycle'] ); ?><?php echo ! empty( $site['policy']['production_allowed'] ) ? ' / production approved' : ' / production denied'; ?></small></td>
-				<td><?php echo ! empty( $site['credential']['managed'] ) ? '<span class="nmm-ok">Managed</span>' : '<span class="nmm-bad">Missing</span>'; ?><?php echo false === ( $site['credential']['healthy'] ?? null ) ? '<br><small class="nmm-bad">Needs rotation</small>' : ''; ?></td>
-				<td><?php echo ! empty( $site['available_abilities_known'] ) ? esc_html( (string) count( (array) $site['available_abilities'] ) ) : 'On demand'; ?></td>
+				<td><?php echo esc_html( self::plugin_state( $site['pro'] ) ); ?><br><small><?php echo ! $status_known ? '<span class="nmm-muted">License not checked</span>' : ( ! empty( $site['pro']['installed'] ) ? ( ! empty( $site['pro']['license_known'] ) ? ( ! empty( $site['pro']['license_active'] ) ? '<span class="nmm-ok">Licensed</span>' : 'Not licensed' ) : '<span class="nmm-muted">License unavailable while Pro is inactive</span>' ) : 'Optional / not installed' ); ?></small></td>
+				<td><?php echo ! $status_known ? '<span class="nmm-muted">Not checked</span>' : ( ! empty( $site['ai']['manual_enabled'] ) ? '<span class="nmm-ok">Enabled in Novamira</span>' : 'Off in Novamira' ); ?><br><small><?php echo esc_html( (string) $site['policy']['ai_lifecycle'] ); ?><?php echo ! empty( $site['policy']['production_allowed'] ) ? ' / production approved' : ' / production denied'; ?></small></td>
+				<td><?php echo ! empty( $site['credential']['managed'] ) ? '<span class="nmm-ok">Managed</span>' : '<span class="nmm-bad">Missing</span>'; ?><?php echo false === ( $site['credential']['healthy'] ?? null ) ? '<br><small class="nmm-bad">Needs rotation</small>' : ''; ?><?php echo $status_known && false === ( $site['credential']['available_for_user'] ?? null ) ? '<br><small class="nmm-bad">App passwords unavailable for connected admin</small>' : ''; ?></td>
+				<td><?php echo ! $status_known ? '<span class="nmm-muted">Not checked</span>' : ( ! empty( $site['available_abilities_known'] ) ? esc_html( (string) count( (array) $site['available_abilities'] ) ) : 'Unavailable while AI is off' ); ?></td>
 				<td><?php echo esc_html( (string) ( $site['last_success'] ?? 'Never' ) ); ?></td>
 				<td><div class="nmm-actions">
 					<?php self::action_button( (int) $site['id'], 'refresh', 'Refresh' ); ?>
@@ -243,7 +263,9 @@ final class Admin {
 						<?php
 					else :
 						self::action_button( (int) $site['id'], 'rotate-credential', ! empty( $site['credential']['managed'] ) ? 'Rotate key' : 'Create key' );
-						self::provision_button( (int) $site['id'], ! empty( $site['ai']['manual_enabled'] ) ? 'disable-ai' : 'enable-ai', ! empty( $site['ai']['manual_enabled'] ) ? 'Disable AI' : 'Enable AI' );
+						if ( $status_known ) {
+							self::provision_button( (int) $site['id'], ! empty( $site['ai']['manual_enabled'] ) ? 'disable-ai' : 'enable-ai', ! empty( $site['ai']['manual_enabled'] ) ? 'Disable AI' : 'Enable AI' );
+						}
 						?>
 					<?php endif; ?>
 					<?php
@@ -283,6 +305,16 @@ endif;
 	private static function render_policies(): void {
 		$fleet = Fleet_Service::list_sites( 1, 100 );
 		?>
+		<div class="ui info message">
+			<div class="header"><?php esc_html_e( 'How Novamira access policies work', 'mainwp-novamira-addon' ); ?></div>
+			<p><?php esc_html_e( 'Policies control what the MainWP MCP gateway may do. They do not overwrite Novamira settings until an operation actually needs access.', 'mainwp-novamira-addon' ); ?></p>
+			<div class="ui two column stackable grid">
+				<div class="column"><strong><?php esc_html_e( 'Gateway enabled', 'mainwp-novamira-addon' ); ?></strong><br><small><?php esc_html_e( 'Allows this site to be reached through the single MainWP MCP connection. Turn it off to isolate a site completely. Recommended: on for managed sites, off for archived or sensitive sites that should never receive AI requests.', 'mainwp-novamira-addon' ); ?></small></div>
+				<div class="column"><strong><?php esc_html_e( 'Approve production JIT access', 'mainwp-novamira-addon' ); ?></strong><br><small><?php esc_html_e( 'Explicitly permits short-lived AI access on a production site. Without approval, production calls fail closed. Recommended: approve only after reviewing the site and its allowed abilities; leave off for sites not yet authorized for AI use.', 'mainwp-novamira-addon' ); ?></small></div>
+				<div class="column"><strong><?php esc_html_e( 'Allow read fan-out', 'mainwp-novamira-addon' ); ?></strong><br><small><?php esc_html_e( 'Lets one verified read-only tool run across several selected sites. It never enables bulk writes. Recommended: on for reporting, inventory, and audits; off when each site must be queried individually.', 'mainwp-novamira-addon' ); ?></small></div>
+				<div class="column"><strong><?php esc_html_e( 'AI lifecycle', 'mainwp-novamira-addon' ); ?></strong><br><small><?php esc_html_e( 'Just in time temporarily enables AI for a request and restores the prior setting; Manual only requires AI to already be enabled in Novamira; Disabled blocks gateway AI access. Recommended: Just in time for most client sites, Manual only for hands-on workflows, Disabled for excluded sites.', 'mainwp-novamira-addon' ); ?></small></div>
+			</div>
+		</div>
 		<form method="post" class="ui segment"><h3>Apply one policy to selected sites</h3><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="bulk-policy"><div class="field"><select name="site_ids[]" multiple size="6" required>
 		<?php
 		foreach ( $fleet['items'] as $site ) :
@@ -303,8 +335,11 @@ endif;
 	}
 
 	private static function render_packages(): void {
-		$packages = Storage::packages();
-		$free     = Fleet_Service::free_package();
+		$packages       = Storage::packages();
+		$free           = Fleet_Service::free_package();
+		$source         = Storage::pro_package_source();
+		$dashboard_pro  = Pro_Package::dashboard_status();
+		$license_stored = Storage::default_pro_license_is_stored();
 		?>
 		<div class="ui info message"><i class="cloud download icon"></i><div class="content"><div class="header">Novamira Free is fetched automatically</div><p>There is no child companion package to upload. Install and repair actions validate Novamira Free directly from its HTTPS upstream release metadata before MainWP sends it to selected child sites.</p></div></div>
 		<div class="nmm-grid">
@@ -318,12 +353,33 @@ endif;
 			?>
 			<div class="ui relaxed list"><div class="item"><strong>Version:</strong> <?php echo esc_html( (string) $free['version'] ); ?></div><div class="item"><strong>Source:</strong> <code>license.dynamic.ooo</code></div><div class="item"><strong>Validated SHA-256:</strong><br><code><?php echo esc_html( (string) $free['sha256'] ); ?></code></div></div><?php endif; ?>
 		<p><i class="check circle green icon"></i>No upload is needed.</p></section>
-		<form method="post" enctype="multipart/form-data" class="ui segment"><h3 class="ui header"><i class="upload icon"></i><span class="content">Novamira Pro bootstrap ZIP<span class="sub header">Optional child plugin</span></span></h3><p>Upload an audited Pro release only when Pro should be centrally deployed. Free continues to work normally without it.</p><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="upload-pro"><div class="field"><input type="file" name="pro_zip" accept=".zip" required></div><button class="ui primary button" type="submit"><i class="shield alternate icon"></i>Validate and store Pro</button>
+		<section class="ui segment"><h3 class="ui header"><i class="box icon"></i><span class="content">Novamira Pro package source<span class="sub header">Optional child plugin</span></span></h3>
+			<p>Choose whether child installations use the Pro copy already installed on this MainWP Dashboard or an uploaded audited ZIP.</p>
+			<form method="post" class="ui form"><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="save-pro-source"><input type="hidden" name="pro_package_source" value="upload"><div class="field"><div class="ui toggle checkbox"><input type="checkbox" name="pro_package_source" value="dashboard" <?php checked( 'dashboard' === $source ); ?> <?php disabled( is_wp_error( $dashboard_pro ) ); ?>><label>Use the Novamira Pro copy installed on this MainWP Dashboard</label></div></div><button class="ui primary button" type="submit"><i class="sync icon"></i>Save source and refresh package</button></form>
+			<?php
+			if ( is_wp_error( $dashboard_pro ) ) :
+				?>
+				<div class="ui warning message"><?php echo esc_html( $dashboard_pro->get_error_message() ); ?> Upload mode remains available.</div>
+				<?php
+else :
+	?>
+				<div class="ui <?php echo 'dashboard' === $source ? 'positive' : ''; ?> message"><strong>Dashboard copy:</strong> version <?php echo esc_html( (string) $dashboard_pro['version'] ); ?>, <?php echo ! empty( $dashboard_pro['active'] ) ? 'active' : 'installed but inactive'; ?>. Dashboard mode rebuilds the child ZIP whenever this installed version changes.</div><?php endif; ?>
+			<div class="ui horizontal divider">or upload a release</div>
+			<form method="post" enctype="multipart/form-data" class="ui form"><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="upload-pro"><div class="field"><input type="file" name="pro_zip" accept=".zip" required></div><button class="ui button" type="submit"><i class="shield alternate icon"></i>Validate, store, and use uploaded ZIP</button></form>
+			<?php
+			if ( ! empty( $packages['pro'] ) && 'upload' === ( $packages['pro']['source'] ?? 'upload' ) ) :
+				?>
+				<div class="ui <?php echo 'upload' === $source ? 'positive' : ''; ?> message">Uploaded version <?php echo esc_html( (string) $packages['pro']['version'] ); ?><br><code><?php echo esc_html( (string) $packages['pro']['sha256'] ); ?></code></div><?php endif; ?>
+		</section>
+		<form method="post" class="ui segment"><h3 class="ui header"><i class="key icon"></i><span class="content">Default Pro license<span class="sub header">Optional and encrypted</span></span></h3><p>A per-site license supplied through the ability overrides this default. Missing or invalid Pro licensing never blocks Free.</p><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="save-default-license">
 		<?php
-		if ( ! empty( $packages['pro'] ) ) :
+		if ( $license_stored ) :
 			?>
-			<div class="ui positive message">Stored version <?php echo esc_html( (string) $packages['pro']['version'] ); ?><br><code><?php echo esc_html( (string) $packages['pro']['sha256'] ); ?></code></div><?php endif; ?></form>
-		<form method="post" class="ui segment"><h3 class="ui header"><i class="key icon"></i><span class="content">Default Pro license<span class="sub header">Optional and encrypted</span></span></h3><p>A per-site license supplied through the ability overrides this default. Missing or invalid Pro licensing never blocks Free.</p><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="save-default-license"><div class="field"><input class="fluid" type="password" name="license_key" autocomplete="new-password"></div><button class="ui primary button" type="submit">Replace default license</button></form></div>
+			<div class="ui positive message"><i class="check circle icon"></i><strong>Default license stored securely.</strong> The key remains encrypted and is never displayed.</div>
+			<?php
+else :
+	?>
+			<div class="ui message"><i class="info circle icon"></i>No default Pro license is stored.</div><?php endif; ?><div class="field"><input class="fluid" type="password" name="license_key" autocomplete="new-password" required placeholder="<?php echo esc_attr( $license_stored ? 'Enter a replacement license key' : 'Enter the default license key' ); ?>"></div><button class="ui primary button" type="submit"><?php echo esc_html( $license_stored ? 'Replace default license' : 'Store default license' ); ?></button></form></div>
 		<?php
 	}
 
@@ -332,8 +388,10 @@ endif;
 		<table class="ui celled table"><thead><tr><th>Time</th><th>User</th><th>Site</th><th>Operation</th><th>Outcome</th><th>Duration</th><th>Correlation</th><th>Argument keys</th></tr></thead><tbody>
 		<?php
 		foreach ( Audit::recent() as $row ) :
+			$user = self::audit_user( (int) $row['user_id'] );
+			$site = self::audit_site( (int) $row['site_id'] );
 			?>
-			<tr><td><?php echo esc_html( $row['event_time'] ); ?></td><td><?php echo esc_html( $row['user_id'] ); ?></td><td><?php echo esc_html( $row['site_id'] ); ?></td><td><?php echo esc_html( $row['operation'] ); ?></td><td><?php echo esc_html( $row['outcome'] ); ?></td><td><?php echo esc_html( $row['duration_ms'] ); ?> ms</td><td><code><?php echo esc_html( $row['correlation_id'] ); ?></code></td><td><code><?php echo esc_html( $row['argument_keys'] ); ?></code></td></tr><?php endforeach; ?></tbody></table>
+			<tr><td><?php echo esc_html( $row['event_time'] ); ?></td><td><?php echo '' !== $user['url'] ? '<a href="' . esc_url( $user['url'] ) . '">' . esc_html( $user['label'] ) . '</a>' : esc_html( $user['label'] ); ?></td><td><?php echo '' !== $site['url'] ? '<a href="' . esc_url( $site['url'] ) . '">' . esc_html( $site['label'] ) . '</a>' : esc_html( $site['label'] ); ?></td><td><?php echo esc_html( $row['operation'] ); ?></td><td><?php echo esc_html( $row['outcome'] ); ?></td><td><?php echo esc_html( $row['duration_ms'] ); ?> ms</td><td><code><?php echo esc_html( $row['correlation_id'] ); ?></code></td><td><code><?php echo esc_html( $row['argument_keys'] ); ?></code></td></tr><?php endforeach; ?></tbody></table>
 		<?php
 	}
 
@@ -378,15 +436,17 @@ endif;
 
 	/** @param array<string,mixed> $site */
 	private static function site_status_table( array $site ): void {
-		$policy = isset( $site['policy'] ) && is_array( $site['policy'] ) ? $site['policy'] : array();
+		$policy       = isset( $site['policy'] ) && is_array( $site['policy'] ) ? $site['policy'] : array();
+		$status_known = ! empty( $site['status_known'] );
 		echo '<table class="widefat striped"><tbody>';
 		echo '<tr><th>URL</th><td>' . esc_html( $site['url'] ) . '</td></tr>';
 		echo '<tr><th>Novamira Free</th><td>' . esc_html( self::plugin_state( $site['free'] ) ) . '</td></tr>';
-		echo '<tr><th>Novamira Pro</th><td>' . esc_html( self::plugin_state( $site['pro'] ) ) . ' / ' . ( ! empty( $site['pro']['license_active'] ) ? 'Licensed' : 'Not licensed' ) . '</td></tr>';
-		echo '<tr><th>AI</th><td>' . ( ! empty( $site['ai']['manual_enabled'] ) ? 'Manually enabled' : 'Manually disabled' ) . ' / ' . esc_html( (string) ( $policy['ai_lifecycle'] ?? 'just-in-time' ) ) . '</td></tr>';
+		echo '<tr><th>Novamira Pro</th><td>' . esc_html( self::plugin_state( $site['pro'] ) ) . ' / ' . ( $status_known ? ( ! empty( $site['pro']['license_known'] ) ? ( ! empty( $site['pro']['license_active'] ) ? 'Licensed' : 'Not licensed' ) : 'License unavailable while Pro is inactive' ) : 'License not checked' ) . '</td></tr>';
+		echo '<tr><th>AI</th><td>' . ( $status_known ? ( ! empty( $site['ai']['manual_enabled'] ) ? 'Enabled in Novamira' : 'Disabled in Novamira' ) : 'Not checked' ) . ' / ' . esc_html( (string) ( $policy['ai_lifecycle'] ?? 'just-in-time' ) ) . '</td></tr>';
 		echo '<tr><th>Production</th><td>' . ( ! empty( $policy['production_allowed'] ) ? 'Approved' : 'Denied' ) . '</td></tr>';
 		echo '<tr><th>Credential</th><td>' . ( ! empty( $site['credential']['managed'] ) ? 'Managed' : 'Missing' ) . '</td></tr>';
-		echo '<tr><th>Abilities</th><td>' . esc_html( implode( ', ', (array) ( $site['available_abilities'] ?? array() ) ) ) . '</td></tr>';
+		echo '<tr><th>Abilities</th><td>' . ( $status_known ? esc_html( implode( ', ', (array) ( $site['available_abilities'] ?? array() ) ) ) : 'Not checked' ) . '</td></tr>';
+		echo '<tr><th>Live settings checked</th><td>' . esc_html( (string) ( $site['status_updated_at'] ?? 'Never' ) ) . '</td></tr>';
 		echo '<tr><th>Last successful call</th><td>' . esc_html( (string) ( $site['last_success'] ?? 'Never' ) ) . '</td></tr>';
 		echo '</tbody></table>';
 	}
@@ -409,6 +469,58 @@ endif;
 			return 'Not detected';
 		}
 		return ( ! empty( $state['active'] ) ? 'Active ' : 'Installed ' ) . (string) ( $state['version'] ?? '' );
+	}
+
+	/** @return array{label:string,url:string} */
+	private static function audit_user( int $user_id ): array {
+		if ( $user_id < 1 ) {
+			return array(
+				'label' => 'System',
+				'url'   => '',
+			);
+		}
+		$user = get_userdata( $user_id );
+		if ( ! $user instanceof \WP_User ) {
+			return array(
+				'label' => 'Deleted user',
+				'url'   => '',
+			);
+		}
+		$label = '' !== (string) $user->display_name ? (string) $user->display_name : (string) $user->user_login;
+		$url   = get_edit_user_link( $user_id );
+		return array(
+			'label' => $label,
+			'url'   => is_string( $url ) ? $url : '',
+		);
+	}
+
+	/** @return array{label:string,url:string} */
+	private static function audit_site( int $site_id ): array {
+		if ( $site_id < 1 ) {
+			return array(
+				'label' => 'MainWP Dashboard',
+				'url'   => '',
+			);
+		}
+		$site = \MainWP\Dashboard\MainWP_DB::instance()->get_website_by_id( $site_id );
+		if ( ! is_object( $site ) || ! \MainWP\Dashboard\MainWP_System_Utility::can_edit_website( $site ) ) {
+			return array(
+				'label' => 'Unavailable site',
+				'url'   => '',
+			);
+		}
+		$label = ! empty( $site->name ) ? (string) $site->name : (string) $site->url;
+		$url   = add_query_arg(
+			array(
+				'page'      => 'managesites',
+				'dashboard' => $site_id,
+			),
+			admin_url( 'admin.php' )
+		);
+		return array(
+			'label' => $label,
+			'url'   => $url,
+		);
 	}
 
 	/** @return array<string,mixed>|\WP_Error */
@@ -452,7 +564,7 @@ endif;
 		if ( (int) ( $upload['size'] ?? 0 ) > 52428800 ) {
 			return new \WP_Error( 'novamira_mainwp_upload_too_large', 'The plugin ZIP exceeds the 50 MB limit.' );
 		}
-		$inspection = self::inspect_package_zip( $temporary, $type );
+		$inspection = Pro_Package::inspect_zip( $temporary );
 		if ( is_wp_error( $inspection ) ) {
 			return $inspection;
 		}
@@ -478,52 +590,13 @@ endif;
 			'download_url' => $url,
 			'version'      => $inspection['version'],
 			'sha256'       => hash_file( 'sha256', $target ),
-			'uploaded_at'  => current_time( 'mysql', true ),
+			'stored_at'    => current_time( 'mysql', true ),
+			'source'       => 'upload',
+			'source_mtime' => 0,
 		);
 		Storage::save_packages( $packages );
+		Storage::set_pro_package_source( 'upload' );
 		return $packages[ $type ];
-	}
-
-	/** @return array{version:string}|\WP_Error */
-	private static function inspect_package_zip( string $path, string $type ) {
-		$root          = 'novamira-pro/';
-		$main_file     = $root . 'novamira-pro.php';
-		$expected_name = 'Novamira Pro';
-		if ( ! class_exists( 'ZipArchive' ) ) {
-			return new \WP_Error( 'novamira_mainwp_zip_unavailable', 'ZipArchive is required to inspect plugin packages.' );
-		}
-		$zip = new \ZipArchive();
-		if ( true !== $zip->open( $path ) ) {
-			return new \WP_Error( 'novamira_mainwp_zip_invalid', 'The uploaded file is not a readable ZIP.' );
-		}
-		if ( $zip->numFiles > 5000 ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-			$zip->close();
-			return new \WP_Error( 'novamira_mainwp_zip_too_many_files', 'The plugin ZIP contains too many files.' );
-		}
-		$main              = '';
-		$uncompressed_size = 0;
-		for ( $index = 0; $index < $zip->numFiles; $index++ ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-			$name               = (string) $zip->getNameIndex( $index );
-			$stat               = $zip->statIndex( $index );
-			$uncompressed_size += is_array( $stat ) ? (int) ( $stat['size'] ?? 0 ) : 0;
-			$attributes         = 0;
-			$operations         = 0;
-			$is_symlink         = $zip->getExternalAttributesIndex( $index, $operations, $attributes ) && 0120000 === ( ( $attributes >> 16 ) & 0170000 );
-			if ( $uncompressed_size > 209715200 || $is_symlink || false !== strpos( $name, "\0" ) || false !== strpos( $name, '\\' ) || false !== strpos( $name, '../' ) || 0 === strpos( $name, '/' ) || 0 !== strpos( $name, $root ) ) {
-				$zip->close();
-				return new \WP_Error( 'novamira_mainwp_zip_unsafe', 'The plugin ZIP contains an unsafe path or invalid root directory.' );
-			}
-			if ( $main_file === $name ) {
-				$main = (string) $zip->getFromIndex( $index );
-			}
-		}
-		$zip->close();
-		$plugin_name = preg_match( '/^[ \t\/*#@]*Plugin Name:\s*([^\r\n]+)/mi', $main, $name_matches ) ? trim( $name_matches[1] ) : '';
-		$version     = preg_match( '/^[ \t\/*#@]*Version:\s*([^\r\n]+)/mi', $main, $version_matches ) ? trim( $version_matches[1] ) : '';
-		if ( '' === $main || 0 !== strcasecmp( $plugin_name, $expected_name ) || 1 !== preg_match( '/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/', $version ) ) {
-			return new \WP_Error( 'novamira_mainwp_zip_header_missing', 'The ZIP does not contain the expected plugin root, main file, name, and version header.' );
-		}
-		return array( 'version' => $version );
 	}
 
 	/** @return array<int,string> */

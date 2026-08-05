@@ -37,7 +37,7 @@ The Connect screen's provider templates are maintained by this add-on and use th
 
 ## Pro behavior
 
-Pro is optional. Administrators may upload a release ZIP that passes root, path, plugin-header, and version checks, then configure an encrypted default license or per-site override. Missing, invalid, expired, or unreachable Pro licensing does not disable or change Novamira Free.
+Pro is optional. Administrators may build the child package from the Novamira Pro copy installed on the MainWP Dashboard or upload a release ZIP that passes root, path, plugin-header, and version checks, then configure an encrypted default license or per-site override. Missing, invalid, expired, or unreachable Pro licensing does not disable or change Novamira Free.
 
 ## Distribution build
 

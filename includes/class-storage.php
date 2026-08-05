@@ -12,6 +12,7 @@ namespace Novamira\MainWP;
 final class Storage {
 	public const PACKAGE_OPTION         = 'novamira_mainwp_packages';
 	public const DEFAULT_LICENSE_OPTION = 'novamira_mainwp_default_pro_license';
+	public const PRO_PACKAGE_SOURCE     = 'novamira_mainwp_pro_package_source';
 
 	public static function site_table(): string {
 		global $wpdb;
@@ -38,6 +39,7 @@ final class Storage {
 			credential_uuid varchar(191) NOT NULL DEFAULT '',
 			policy longtext NULL,
 			status_cache longtext NULL,
+			status_checked_at datetime NULL,
 			pro_license_secret longtext NULL,
 			last_success datetime NULL,
 			updated_at datetime NOT NULL,
@@ -87,6 +89,7 @@ final class Storage {
 			'credential_uuid',
 			'policy',
 			'status_cache',
+			'status_checked_at',
 			'pro_license_secret',
 			'last_success',
 		);
@@ -149,10 +152,31 @@ final class Storage {
 		update_option( self::PACKAGE_OPTION, $packages, false );
 	}
 
+	public static function pro_package_source(): string {
+		$source = get_option( self::PRO_PACKAGE_SOURCE, '' );
+		if ( in_array( $source, array( 'dashboard', 'upload' ), true ) ) {
+			return (string) $source;
+		}
+		return defined( 'WP_PLUGIN_DIR' ) && is_file( WP_PLUGIN_DIR . '/novamira-pro/novamira-pro.php' ) ? 'dashboard' : 'upload';
+	}
+
+	public static function set_pro_package_source( string $source ): bool {
+		if ( ! in_array( $source, array( 'dashboard', 'upload' ), true ) ) {
+			return false;
+		}
+		update_option( self::PRO_PACKAGE_SOURCE, $source, false );
+		return get_option( self::PRO_PACKAGE_SOURCE, '' ) === $source;
+	}
+
 	/** @return string|\WP_Error */
 	public static function default_pro_license() {
 		$payload = get_option( self::DEFAULT_LICENSE_OPTION, '' );
 		return is_string( $payload ) ? Crypto::decrypt( $payload ) : '';
+	}
+
+	public static function default_pro_license_is_stored(): bool {
+		$payload = get_option( self::DEFAULT_LICENSE_OPTION, '' );
+		return is_string( $payload ) && '' !== $payload;
 	}
 
 	/** @return true|\WP_Error */
@@ -182,6 +206,7 @@ final class Storage {
 			'credential_uuid'     => '',
 			'policy'              => array(),
 			'status_cache'        => array(),
+			'status_checked_at'   => null,
 			'pro_license_secret'  => '',
 			'last_success'        => null,
 			'updated_at'          => '',

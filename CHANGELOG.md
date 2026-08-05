@@ -2,6 +2,15 @@
 
 All notable changes to Novamira for MainWP are documented here.
 
+## 0.4.0 - 2026-08-05
+
+- [NEW] Added a switch between an automatically rebuilt package from the Dashboard's installed Novamira Pro copy and an administrator-uploaded audited Pro ZIP.
+- [IMPROVE] Added plain-language policy guidance with recommended settings for managed, production, reporting, and excluded-site use cases.
+- [IMPROVE] Replaced raw audit user and site IDs with linked WordPress and MainWP names.
+- [FIX] Read Novamira's actual AI, Pro license, application-password, and ability state through the signed MainWP Child connection and distinguish unchecked state from disabled or unlicensed state.
+- [FIX] Added per-site and bulk live-status refresh so settings changed directly in child wp-admin are visible without being overwritten.
+- [SECURITY] Kept Pro license keys encrypted and added a stored-key indicator without revealing any key material.
+
 ## 0.3.1 - 2026-08-05
 
 - [FIX] Protected the fixed one-shot child runtime from MainWP form-transport slash normalization.

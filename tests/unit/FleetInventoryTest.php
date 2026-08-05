@@ -48,6 +48,48 @@ final class FleetInventoryTest extends TestCase {
 		self::assertSame( '1.11.3', $result['items'][0]['free']['update_version'] );
 		self::assertTrue( $result['items'][0]['pro']['installed'] );
 		self::assertTrue( $result['items'][0]['pro']['active'] );
-		self::assertFalse( $result['items'][0]['pro']['license_active'] );
+		self::assertArrayNotHasKey( 'license_active', $result['items'][0]['pro'] );
+		self::assertFalse( $result['items'][0]['status_known'] );
+	}
+
+	public function test_refreshed_child_status_reports_existing_ai_and_pro_license_settings(): void {
+		NMM_Test_MainWP_DB::$sites = array(
+			77 => (object) array(
+				'id'              => 77,
+				'name'            => 'Existing Novamira site',
+				'url'             => 'https://existing.test',
+				'suspended'       => 0,
+				'plugins'         => wp_json_encode(
+					array(
+						'novamira/novamira.php'         => array( 'version' => '1.11.2', 'active' => true ),
+						'novamira-pro/novamira-pro.php' => array( 'version' => '1.8.2', 'active' => true ),
+					)
+				),
+				'plugin_upgrades' => '{}',
+			),
+		);
+		\Novamira\MainWP\Storage::update_site(
+			77,
+			array(
+				'status_checked_at' => '2026-08-05 18:00:00',
+				'status_cache'      => array(
+					'free'                      => array( 'installed' => true, 'active' => true, 'version' => '1.11.2' ),
+					'pro'                       => array( 'installed' => true, 'active' => true, 'version' => '1.8.2', 'license_known' => true, 'license_active' => true, 'license_masked' => 'ABCD?WXYZ' ),
+					'ai'                        => array( 'manual_enabled' => true, 'production' => true ),
+					'application_passwords'     => array( 'supported' => true, 'available_for_user' => true, 'credential_healthy' => null ),
+					'available_abilities'       => array( 'novamira/site-info', 'novamira/content-read' ),
+					'available_abilities_known' => true,
+				),
+			)
+		);
+
+		$result = Fleet_Service::list_sites();
+
+		self::assertTrue( $result['items'][0]['status_known'] );
+		self::assertSame( '2026-08-05 18:00:00', $result['items'][0]['status_updated_at'] );
+		self::assertTrue( $result['items'][0]['ai']['manual_enabled'] );
+		self::assertTrue( $result['items'][0]['pro']['license_active'] );
+		self::assertTrue( $result['items'][0]['credential']['available_for_user'] );
+		self::assertCount( 2, $result['items'][0]['available_abilities'] );
 	}
 }

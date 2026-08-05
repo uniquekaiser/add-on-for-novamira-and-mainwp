@@ -4,7 +4,7 @@ Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.3.1
+Stable tag: 0.4.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -14,9 +14,9 @@ Manage unmodified Novamira Free sites and route approved child MCP servers throu
 
 This independently owned plugin runs only on the MainWP Dashboard. It uses each site's existing authenticated MainWP Child connection for one-shot status, settings, and application-password operations; no extra companion plugin is installed on client sites. Novamira Free is not modified, bundled, or repackaged.
 
-On the Dashboard, the add-on provides fleet status, package deployment, encrypted credentials, redacted auditing, provider configurations, and the novamira-mainwp routed ability namespace. MainWP MCP Bridge keeps control of its existing exposure, policy, rate-limit, resource, prompt, and confirmation architecture.
+On the Dashboard, the add-on provides fleet status, package deployment, encrypted credentials, redacted auditing, provider configurations, and the novamira-mainwp routed ability namespace. MainWP MCP Bridge keeps control of its existing exposure, policy, rate-limit, resource, prompt, and confirmation architecture. Fleet status includes an explicit live refresh timestamp, so settings changed directly in child wp-admin are read through the existing signed MainWP connection instead of being inferred from add-on policy.
 
-Novamira Free provides the MCP server and abilities. Pro controls appear only when an administrator chooses to upload, install, and license Pro.
+Novamira Free provides the MCP server and abilities. Pro controls remain optional: child installations can use a validated package built from the Pro copy installed on the MainWP Dashboard or an administrator-uploaded audited ZIP.
 
 This is an independent integration project and is not maintained by or affiliated with Novamira or MainWP.
 
@@ -26,11 +26,18 @@ Official packages update from the public GitHub Releases page. Only the exact ve
 
 1. Install MainWP Dashboard, MainWP MCP Bridge, and Novamira for MainWP on the Dashboard.
 2. Use Fleet to install or activate validated upstream Novamira Free on selected child sites.
-3. Optionally upload an audited Novamira Pro ZIP on Packages.
+3. Optionally use the Novamira Pro copy installed on the Dashboard or upload an audited Pro ZIP on Packages.
 4. Approve each production site's policy and create its managed credential.
 5. Create a one-time Dashboard application password on Connect and add the displayed MainWP profile to the AI client.
 
 == Changelog ==
+
+= 0.4.0 =
+* [NEW] Added a switch between a package built from the Dashboard's installed Novamira Pro copy and an uploaded audited Pro ZIP.
+* [IMPROVE] Explained every policy control with practical recommendations and linked audit users and sites by name.
+* [FIX] Read actual child AI, Pro license, application-password, and ability state and distinguish unchecked state from disabled or unlicensed state.
+* [FIX] Added per-site and bulk live-status refresh for settings changed directly in child wp-admin.
+* [SECURITY] Added a stored default-license indicator without exposing encrypted key material.
 
 = 0.3.1 =
 * [FIX] Protected the fixed one-shot child runtime from MainWP form-transport slash normalization.

@@ -3,7 +3,7 @@
  * Plugin Name: Novamira for MainWP
  * Plugin URI:  https://github.com/uniquekaiser/novamira-for-mainwp/
  * Description: Centrally provisions, secures, and routes Novamira MCP servers for MainWP child sites.
- * Version:     0.3.1
+ * Version:     0.4.0
  * Requires at least: 6.9
  * Requires PHP: 7.4
  * Author:      Synergetic
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'NOVAMIRA_MAINWP_VERSION', '0.3.1' );
+define( 'NOVAMIRA_MAINWP_VERSION', '0.4.0' );
 define( 'NOVAMIRA_MAINWP_FILE', __FILE__ );
 define( 'NOVAMIRA_MAINWP_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -26,6 +26,7 @@ require_once NOVAMIRA_MAINWP_DIR . 'includes/class-github-updater.php';
 
 require_once NOVAMIRA_MAINWP_DIR . 'includes/class-crypto.php';
 require_once NOVAMIRA_MAINWP_DIR . 'includes/class-storage.php';
+require_once NOVAMIRA_MAINWP_DIR . 'includes/class-pro-package.php';
 require_once NOVAMIRA_MAINWP_DIR . 'includes/class-audit.php';
 require_once NOVAMIRA_MAINWP_DIR . 'includes/class-child-runtime.php';
 require_once NOVAMIRA_MAINWP_DIR . 'includes/class-runtime-access.php';

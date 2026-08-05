@@ -62,8 +62,9 @@ final class Fleet_Service {
 		Storage::update_site(
 			$site_id,
 			array(
-				'status_cache' => $status,
-				'last_success' => current_time( 'mysql', true ),
+				'status_cache'      => $status,
+				'status_checked_at' => current_time( 'mysql', true ),
+				'last_success'      => current_time( 'mysql', true ),
 			)
 		);
 		Audit::record( $site_id, 'status', 'success', self::duration( $started ) );
@@ -224,7 +225,7 @@ final class Fleet_Service {
 	 * @return array<string, mixed>
 	 */
 	public static function provision( array $site_ids, string $operation, bool $dry_run ): array {
-		$allowed = array( 'repair-free', 'install-free', 'activate-free', 'update-free', 'enable-ai', 'disable-ai', 'install-pro', 'activate-pro', 'update-pro' );
+		$allowed = array( 'refresh-status', 'repair-free', 'install-free', 'activate-free', 'update-free', 'enable-ai', 'disable-ai', 'install-pro', 'activate-pro', 'update-pro' );
 		if ( ! in_array( $operation, $allowed, true ) ) {
 			return array( 'error' => 'Unsupported provisioning operation.' );
 		}
@@ -258,8 +259,8 @@ final class Fleet_Service {
 		$results = array();
 		foreach ( $site_ids as $site_id ) {
 			$started = microtime( true );
-			$result  = self::provision_one( $site_id, $operation );
-			if ( ! is_wp_error( $result ) ) {
+			$result  = 'refresh-status' === $operation ? self::refresh_status( $site_id ) : self::provision_one( $site_id, $operation );
+			if ( ! is_wp_error( $result ) && 'refresh-status' !== $operation ) {
 				$status = self::refresh_status( $site_id );
 				$result = array(
 					'operation' => $result,
@@ -438,14 +439,11 @@ final class Fleet_Service {
 		if ( 'activate-pro' === $operation ) {
 			return MainWP_Client::activate_plugin( $site_id, self::PRO_PLUGIN );
 		}
-		if ( 'update-pro' === $operation ) {
-			return MainWP_Client::update_plugin( $site_id, self::PRO_PLUGIN );
+		$package = Pro_Package::active();
+		if ( is_wp_error( $package ) ) {
+			return $package;
 		}
-		$packages = Storage::packages();
-		if ( empty( $packages['pro']['download_url'] ) ) {
-			return new \WP_Error( 'novamira_mainwp_pro_package_missing', 'Upload an audited Novamira Pro ZIP first.' );
-		}
-		return MainWP_Client::install_plugin( $site_id, (string) $packages['pro']['download_url'], true, false );
+		return MainWP_Client::install_plugin( $site_id, (string) $package['download_url'], true, 'update-pro' === $operation );
 	}
 
 	/** @return array<string, mixed>|\WP_Error */
@@ -563,15 +561,13 @@ final class Fleet_Service {
 	private static function format_site( $site, array $stored, array $status ): array {
 		$free_inventory = self::plugin_inventory_status( $site, self::FREE_PLUGIN );
 		$pro_inventory  = self::plugin_inventory_status( $site, self::PRO_PLUGIN );
+		$status_known   = ! empty( $stored['status_checked_at'] ) && ! empty( $status );
 		$free           = isset( $status['free'] ) && is_array( $status['free'] )
 			? array_merge( $free_inventory, $status['free'] )
 			: $free_inventory;
 		$pro            = isset( $status['pro'] ) && is_array( $status['pro'] )
 			? array_merge( $pro_inventory, array( 'license_active' => false ), $status['pro'] )
-			: array_merge(
-				$pro_inventory,
-				array( 'license_active' => false )
-			);
+			: $pro_inventory;
 
 		return array(
 			'id'                        => (int) $site->id,
@@ -580,18 +576,21 @@ final class Fleet_Service {
 			'suspended'                 => ! empty( $site->suspended ),
 			'sync_error'                => isset( $site->sync_errors ) ? (string) $site->sync_errors : '',
 			'credential'                => array(
-				'managed'  => '' !== (string) $stored['credential_uuid'],
-				'username' => (string) $stored['credential_username'],
-				'healthy'  => $status['application_passwords']['credential_healthy'] ?? null,
+				'managed'            => '' !== (string) $stored['credential_uuid'],
+				'username'           => (string) $stored['credential_username'],
+				'healthy'            => $status['application_passwords']['credential_healthy'] ?? null,
+				'supported'          => $status['application_passwords']['supported'] ?? null,
+				'available_for_user' => $status['application_passwords']['available_for_user'] ?? null,
 			),
 			'free'                      => $free,
 			'pro'                       => $pro,
-			'ai'                        => $status['ai'] ?? array(),
+			'ai'                        => $status_known && isset( $status['ai'] ) && is_array( $status['ai'] ) ? $status['ai'] : array(),
 			'available_abilities'       => $status['available_abilities'] ?? array(),
 			'available_abilities_known' => $status['available_abilities_known'] ?? false,
+			'status_known'              => $status_known,
 			'policy'                    => Storage::policy( (int) $site->id ),
 			'last_success'              => $stored['last_success'],
-			'status_updated_at'         => $stored['updated_at'],
+			'status_updated_at'         => $stored['status_checked_at'],
 		);
 	}
 

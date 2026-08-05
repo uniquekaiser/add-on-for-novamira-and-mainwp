@@ -51,6 +51,9 @@ $__nmm_plugin_state = static function ( $plugins, $file ) {
 	);
 };
 $__nmm_manual_enabled = static function () {
+	if ( function_exists( 'novamira_is_enabled' ) ) {
+		return (bool) novamira_is_enabled();
+	}
 	$enabled = get_option( 'novamira_ai_abilities_enabled', false );
 	$locked  = (string) get_option( 'novamira_ai_abilities_domain', '' );
 	$current = (string) wp_parse_url( home_url(), PHP_URL_HOST );
@@ -76,12 +79,14 @@ try {
 		$plugins  = get_plugins();
 		$free     = $__nmm_plugin_state( $plugins, 'novamira/novamira.php' );
 		$pro      = $__nmm_plugin_state( $plugins, 'novamira-pro/novamira-pro.php' );
-		$username = isset( $__nmm_params['username'] ) ? sanitize_user( (string) $__nmm_params['username'] ) : '';
-		$uuid     = isset( $__nmm_params['credential_uuid'] ) ? sanitize_text_field( (string) $__nmm_params['credential_uuid'] ) : '';
-		$healthy  = null;
+		$username  = isset( $__nmm_params['username'] ) ? sanitize_user( (string) $__nmm_params['username'] ) : '';
+		$uuid      = isset( $__nmm_params['credential_uuid'] ) ? sanitize_text_field( (string) $__nmm_params['credential_uuid'] ) : '';
+		$connected = sanitize_user( (string) get_option( 'mainwp_child_connected_admin', '' ) );
+		$user      = '' !== $connected ? get_user_by( 'login', $connected ) : false;
+		$healthy   = null;
 		if ( '' !== $username && '' !== $uuid ) {
-			$user    = get_user_by( 'login', $username );
-			$healthy = $user instanceof \WP_User && is_array( \WP_Application_Passwords::get_user_application_password( $user->ID, $uuid ) );
+			$credential_user = get_user_by( 'login', $username );
+			$healthy         = $credential_user instanceof \WP_User && is_array( \WP_Application_Passwords::get_user_application_password( $credential_user->ID, $uuid ) );
 		}
 		$abilities = array();
 		if ( function_exists( 'wp_get_abilities' ) ) {
@@ -96,7 +101,8 @@ try {
 			sort( $abilities, SORT_STRING );
 		}
 		$rules = function_exists( 'novamira_get_ability_rules' ) ? novamira_get_ability_rules() : array();
-		$pro['license_active'] = function_exists( 'Novamira\\Pro\\is_license_active' ) && \Novamira\Pro\is_license_active();
+		$pro['license_known']  = function_exists( 'Novamira\\Pro\\is_license_active' );
+		$pro['license_active'] = $pro['license_known'] && \Novamira\Pro\is_license_active();
 		$pro['license_masked'] = function_exists( 'Novamira\\Pro\\license_key_masked' ) ? \Novamira\Pro\license_key_masked() : '';
 		$pro['license_error']  = function_exists( 'Novamira\\Pro\\license_error' ) ? \Novamira\Pro\license_error() : '';
 		$__nmm_reply(
@@ -110,6 +116,7 @@ try {
 				),
 				'application_passwords'     => array(
 					'supported'          => function_exists( 'wp_is_application_passwords_supported' ) && wp_is_application_passwords_supported(),
+					'available_for_user' => $user instanceof \WP_User && function_exists( 'wp_is_application_passwords_available_for_user' ) && wp_is_application_passwords_available_for_user( $user ),
 					'credential_healthy' => $healthy,
 				),
 				'ability_rules'             => is_array( $rules ) ? $rules : array(),
@@ -164,7 +171,11 @@ try {
 			throw new \RuntimeException( 'Novamira Free must be active before its AI settings can be changed.' );
 		}
 		$enabled = ! empty( $__nmm_params['enabled'] );
-		if ( $enabled ) {
+		if ( $enabled && function_exists( 'novamira_enable_ai_abilities' ) ) {
+			novamira_enable_ai_abilities();
+		} elseif ( ! $enabled && function_exists( 'novamira_disable_ai_abilities' ) ) {
+			novamira_disable_ai_abilities();
+		} elseif ( $enabled ) {
 			update_option( 'novamira_ai_abilities_enabled', '1', false );
 			update_option( 'novamira_ai_abilities_domain', (string) wp_parse_url( home_url(), PHP_URL_HOST ), false );
 		} else {
