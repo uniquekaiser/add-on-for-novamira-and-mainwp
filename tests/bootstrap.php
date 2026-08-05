@@ -4,7 +4,7 @@
 declare( strict_types=1 );
 
 define( 'ABSPATH', __DIR__ . '/tmp-wordpress/' );
-define( 'NOVAMIRA_MAINWP_VERSION', '0.3.0' );
+define( 'NOVAMIRA_MAINWP_VERSION', '0.3.1' );
 define( 'NOVAMIRA_MAINWP_DIR', dirname( __DIR__ ) . '/' );
 define( 'NOVAMIRA_MAINWP_FILE', dirname( __DIR__ ) . '/mainwp-novamira-addon.php' );
 define( 'ARRAY_A', 'ARRAY_A' );
@@ -132,8 +132,16 @@ function wp_unschedule_event( int $timestamp, string $hook, array $args = array(
 	$GLOBALS['nmm_scheduled'] = array_values( $GLOBALS['nmm_scheduled'] );
 	return true;
 }
-function nmm_child_action( array $params ): array {
+function nmm_child_source( array $params ): string {
 	$code = isset( $params['code'] ) ? (string) $params['code'] : '';
+	if ( 1 === preg_match( "/base64_decode\\('([^']+)',true\\)/", $code, $matches ) ) {
+		$decoded = base64_decode( $matches[1], true );
+		if ( is_string( $decoded ) ) return $decoded;
+	}
+	return $code;
+}
+function nmm_child_action( array $params ): array {
+	$code = nmm_child_source( $params );
 	if ( 1 !== preg_match( "/base64_decode\\( '([^']+)' \\)/", $code, $matches ) ) return array();
 	$decoded = json_decode( (string) base64_decode( $matches[1], true ), true );
 	return is_array( $decoded ) ? $decoded : array();

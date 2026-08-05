@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 final class ChildRuntimeTest extends TestCase {
 	public function test_script_embeds_a_fixed_one_shot_operation_without_persistent_child_code(): void {
 		$script  = Child_Runtime::script( 'credential-create', array( 'username' => 'admin', 'label' => 'Novamira MainWP' ) );
+		$source  = nmm_child_source( array( 'code' => $script ) );
 		$payload = nmm_child_action( array( 'code' => $script ) );
 
 		self::assertSame( 'credential-create', $payload['action'] );
@@ -15,7 +16,19 @@ final class ChildRuntimeTest extends TestCase {
 		self::assertStringNotContainsString( '__NMM_PAYLOAD__', $script );
 		self::assertStringNotContainsString( 'save_snippet', $script );
 		self::assertStringNotContainsString( 'mainwp_child_extra_execution', $script );
-		self::assertStringContainsString( 'mainwp_child_connected_admin', $script );
+		self::assertStringContainsString( 'mainwp_child_connected_admin', $source );
+		self::assertStringNotContainsString( 'mainwp_child_connected_admin', $script );
+		self::assertStringContainsString( 'base64_decode', $script );
+	}
+
+	public function test_transport_wrapper_executes_the_fixed_source_without_parse_errors(): void {
+		$script = Child_Runtime::script( 'unknown' );
+
+		ob_start();
+		eval( $script );
+		$output = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'NOVAMIRA_MAINWP_RESULT:', $output );
 	}
 
 	public function test_decoder_normalizes_success_and_scoped_child_errors(): void {

@@ -2,6 +2,12 @@
 
 All notable changes to Novamira for MainWP are documented here.
 
+## 0.3.1 - 2026-08-05
+
+- [FIX] Protected the fixed one-shot child runtime from MainWP form-transport slash normalization.
+- [COMPAT] Fully qualified WordPress, Throwable, RuntimeException, and optional Novamira Pro symbols inside MainWP Child's namespace.
+- [DEV] Added transport-envelope regression coverage and verified the signed runtime against a real MainWP Child 6.1.5 site.
+
 ## 0.3.0 - 2026-08-05
 
 - [NEW] Replaced the child companion architecture with signed, non-persistent one-shot operations over the existing MainWP Child connection.

@@ -4,7 +4,7 @@ Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -32,8 +32,11 @@ Official packages update from the public GitHub Releases page. Only the exact ve
 
 == Changelog ==
 
-= 0.2.4 =
-* [IMPROVE] Ensured future updates show the target release notes, WordPress and PHP requirements, and plugin icon before installation.
+= 0.3.1 =
+* [FIX] Protected the fixed one-shot child runtime from MainWP form-transport slash normalization.
+* [COMPAT] Fully qualified WordPress, Throwable, RuntimeException, and optional Novamira Pro symbols inside MainWP Child's namespace.
+* [DEV] Added transport-envelope regression coverage and verified the signed runtime against a real MainWP Child 6.1.5 site.
+
 = 0.3.0 =
 * [NEW] Rebuilt child management around MainWP Child's existing signed connection; no companion plugin is installed on client sites.
 * [FIX] Listed all accessible MainWP sites by omitting the empty legacy search argument that returned an empty fleet on MainWP 6.1.
@@ -41,6 +44,8 @@ Official packages update from the public GitHub Releases page. Only the exact ve
 * [SECURITY] Added Dashboard-owned five-minute AI access windows with prior-value restoration, concurrent-call tracking, and crash-safe cleanup.
 * [COMPAT] Kept Novamira Free fully functional when Pro is absent, invalid, expired, or unreachable.
 
+= 0.2.4 =
+* [IMPROVE] Ensured future updates show the target release notes, WordPress and PHP requirements, and plugin icon before installation.
 * [DEV] Completed cross-version update verification against the published GitHub release asset.
 
 = 0.2.3 =

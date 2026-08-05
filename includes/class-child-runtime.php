@@ -81,7 +81,7 @@ try {
 		$healthy  = null;
 		if ( '' !== $username && '' !== $uuid ) {
 			$user    = get_user_by( 'login', $username );
-			$healthy = $user instanceof WP_User && is_array( WP_Application_Passwords::get_user_application_password( $user->ID, $uuid ) );
+			$healthy = $user instanceof \WP_User && is_array( \WP_Application_Passwords::get_user_application_password( $user->ID, $uuid ) );
 		}
 		$abilities = array();
 		if ( function_exists( 'wp_get_abilities' ) ) {
@@ -96,9 +96,9 @@ try {
 			sort( $abilities, SORT_STRING );
 		}
 		$rules = function_exists( 'novamira_get_ability_rules' ) ? novamira_get_ability_rules() : array();
-		$pro['license_active'] = function_exists( 'Novamira\\Pro\\is_license_active' ) && Novamira\Pro\is_license_active();
-		$pro['license_masked'] = function_exists( 'Novamira\\Pro\\license_key_masked' ) ? Novamira\Pro\license_key_masked() : '';
-		$pro['license_error']  = function_exists( 'Novamira\\Pro\\license_error' ) ? Novamira\Pro\license_error() : '';
+		$pro['license_active'] = function_exists( 'Novamira\\Pro\\is_license_active' ) && \Novamira\Pro\is_license_active();
+		$pro['license_masked'] = function_exists( 'Novamira\\Pro\\license_key_masked' ) ? \Novamira\Pro\license_key_masked() : '';
+		$pro['license_error']  = function_exists( 'Novamira\\Pro\\license_error' ) ? \Novamira\Pro\license_error() : '';
 		$__nmm_reply(
 			true,
 			array(
@@ -125,12 +125,12 @@ try {
 		$user      = get_user_by( 'login', $connected );
 		if ( '' === $connected || ( '' !== $requested && ! hash_equals( $connected, $requested ) ) ) {
 			$__nmm_reply( false, array(), 'connected_user_mismatch', 'Credentials may be created only for the MainWP-connected administrator.' );
-		} elseif ( ! $user instanceof WP_User || ( ! user_can( $user, 'manage_options' ) && ! ( is_multisite() && is_super_admin( $user->ID ) ) ) ) {
+		} elseif ( ! $user instanceof \WP_User || ( ! user_can( $user, 'manage_options' ) && ! ( is_multisite() && is_super_admin( $user->ID ) ) ) ) {
 			$__nmm_reply( false, array(), 'connected_user_forbidden', 'The MainWP-connected user is not an administrator.' );
 		} elseif ( ! wp_is_application_passwords_available_for_user( $user ) ) {
 			$__nmm_reply( false, array(), 'application_passwords_unavailable', 'Application Passwords are unavailable for the connected administrator.' );
 		} else {
-			$created = WP_Application_Passwords::create_new_application_password( $user->ID, array( 'name' => $label ) );
+			$created = \WP_Application_Passwords::create_new_application_password( $user->ID, array( 'name' => $label ) );
 			if ( is_wp_error( $created ) ) {
 				$__nmm_reply( false, array(), $created->get_error_code(), $created->get_error_message() );
 			} else {
@@ -142,10 +142,10 @@ try {
 		$requested = isset( $__nmm_params['username'] ) ? sanitize_user( (string) $__nmm_params['username'] ) : '';
 		$uuid      = isset( $__nmm_params['uuid'] ) ? sanitize_text_field( (string) $__nmm_params['uuid'] ) : '';
 		$user      = get_user_by( 'login', $connected );
-		if ( '' === $connected || '' === $uuid || ( '' !== $requested && ! hash_equals( $connected, $requested ) ) || ! $user instanceof WP_User ) {
+		if ( '' === $connected || '' === $uuid || ( '' !== $requested && ! hash_equals( $connected, $requested ) ) || ! $user instanceof \WP_User ) {
 			$__nmm_reply( false, array(), 'credential_revoke_invalid', 'The managed credential could not be resolved for the connected administrator.' );
 		} else {
-			$__nmm_reply( true, array( 'revoked' => (bool) WP_Application_Passwords::delete_application_password( $user->ID, $uuid ) ) );
+			$__nmm_reply( true, array( 'revoked' => (bool) \WP_Application_Passwords::delete_application_password( $user->ID, $uuid ) ) );
 		}
 	} elseif ( 'set-rules' === $__nmm_action ) {
 		$rules = array();
@@ -161,7 +161,7 @@ try {
 		$__nmm_reply( true, array( 'ability_rules' => $rules ) );
 	} elseif ( 'ai-set' === $__nmm_action ) {
 		if ( ! defined( 'NOVAMIRA_VERSION' ) ) {
-			throw new RuntimeException( 'Novamira Free must be active before its AI settings can be changed.' );
+			throw new \RuntimeException( 'Novamira Free must be active before its AI settings can be changed.' );
 		}
 		$enabled = ! empty( $__nmm_params['enabled'] );
 		if ( $enabled ) {
@@ -174,7 +174,7 @@ try {
 		$__nmm_reply( true, array( 'manual_enabled' => $__nmm_manual_enabled() ) );
 	} elseif ( 'ai-open' === $__nmm_action ) {
 		if ( ! defined( 'NOVAMIRA_VERSION' ) ) {
-			throw new RuntimeException( 'Novamira Free must be active before the MCP gateway can open an access window.' );
+			throw new \RuntimeException( 'Novamira Free must be active before the MCP gateway can open an access window.' );
 		}
 		$lifecycle = isset( $__nmm_params['lifecycle'] ) ? sanitize_key( (string) $__nmm_params['lifecycle'] ) : 'just-in-time';
 		$production_allowed = ! empty( $__nmm_params['production_allowed'] );
@@ -220,29 +220,44 @@ try {
 		$success   = false;
 		$message   = '';
 		if ( 'activate' === $operation && '' !== $key && function_exists( 'Novamira\\Pro\\activate_new_license_key' ) ) {
-			list( $success, $message ) = Novamira\Pro\activate_new_license_key( $key );
+			list( $success, $message ) = \Novamira\Pro\activate_new_license_key( $key );
 		} elseif ( 'deactivate' === $operation && function_exists( 'Novamira\\Pro\\deactivate_license' ) ) {
-			list( $success, $message ) = Novamira\Pro\deactivate_license();
+			list( $success, $message ) = \Novamira\Pro\deactivate_license();
 		} elseif ( 'refresh' === $operation && function_exists( 'Novamira\\Pro\\refresh_and_repair_license_status' ) ) {
-			Novamira\Pro\refresh_and_repair_license_status();
-			$success = function_exists( 'Novamira\\Pro\\is_license_active' ) && Novamira\Pro\is_license_active();
-			$message = function_exists( 'Novamira\\Pro\\license_error' ) ? Novamira\Pro\license_error() : '';
+			\Novamira\Pro\refresh_and_repair_license_status();
+			$success = function_exists( 'Novamira\\Pro\\is_license_active' ) && \Novamira\Pro\is_license_active();
+			$message = function_exists( 'Novamira\\Pro\\license_error' ) ? \Novamira\Pro\license_error() : '';
 		} else {
 			$__nmm_reply( false, array(), 'invalid_pro_operation', 'Novamira Pro is unavailable or the requested license operation is unsupported.' );
 			$operation = '';
 		}
 		if ( in_array( $operation, array( 'activate', 'deactivate', 'refresh' ), true ) ) {
-			$__nmm_reply( (bool) $success, array( 'active' => function_exists( 'Novamira\\Pro\\is_license_active' ) && Novamira\Pro\is_license_active(), 'masked' => function_exists( 'Novamira\\Pro\\license_key_masked' ) ? Novamira\Pro\license_key_masked() : '', 'message' => (string) $message ), 'pro_license_failed', (string) $message );
+			$__nmm_reply( (bool) $success, array( 'active' => function_exists( 'Novamira\\Pro\\is_license_active' ) && \Novamira\Pro\is_license_active(), 'masked' => function_exists( 'Novamira\\Pro\\license_key_masked' ) ? \Novamira\Pro\license_key_masked() : '', 'message' => (string) $message ), 'pro_license_failed', (string) $message );
 		}
 	} else {
 		$__nmm_reply( false, array(), 'unknown_operation', 'Unknown Novamira MainWP child operation.' );
 	}
-} catch ( Throwable $error ) {
+} catch ( \Throwable $error ) {
 	$__nmm_reply( false, array(), 'child_runtime_error', $error->getMessage() );
 }
 PHP;
 
-		return str_replace( '__NMM_PAYLOAD__', $payload, $script );
+		$source  = str_replace( '__NMM_PAYLOAD__', $payload, $script );
+		$encoded = base64_encode( $source ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Protecting fixed source from form-transport slash normalization.
+		$invalid = base64_encode( // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Fixed error envelope for an impossible decode failure.
+			wp_json_encode(
+				array(
+					'ok'    => false,
+					'data'  => array(),
+					'error' => array(
+						'code'    => 'child_runtime_decode_failed',
+						'message' => 'The fixed Novamira runtime source could not be decoded.',
+					),
+				)
+			)
+		);
+
+		return '$__nmm_source=base64_decode(\'' . $encoded . '\',true);if(false===$__nmm_source){echo "\\nNOVAMIRA_MAINWP_RESULT:' . $invalid . '\\n";}else{eval($__nmm_source);}';
 	}
 
 	/** @return array<string,mixed>|\WP_Error */
