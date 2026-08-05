@@ -1,6 +1,6 @@
 <?php
 /**
- * Request-scoped, leased MCP client for a Novamira child site.
+ * Request-scoped MCP client for a Novamira child site.
  *
  * @package NovamiraMainWP
  */
@@ -107,7 +107,7 @@ final class Remote_MCP_Client {
 			return is_wp_error( $secret ) ? $secret : new \WP_Error( 'novamira_mainwp_credential_missing', 'Create a managed Novamira credential for this site first.' );
 		}
 
-		$lease = MainWP_Client::child_call( $site_id, 'lease-acquire' );
+		$lease = Runtime_Access::acquire( $site_id );
 		if ( is_wp_error( $lease ) ) {
 			return $lease;
 		}
@@ -120,7 +120,7 @@ final class Remote_MCP_Client {
 			&& ( in_array( $host, array( 'localhost', '127.0.0.1', '::1' ), true ) || '.local' === substr( strtolower( $host ), -6 ) )
 			&& in_array( $environment, array( 'local', 'development' ), true );
 		if ( 1 !== preg_match( '#^https://#i', $url ) && ! $local_http ) {
-			MainWP_Client::child_call( $site_id, 'lease-release', array( 'token' => $token ) );
+			Runtime_Access::release( $site_id, $token );
 			return new \WP_Error( 'novamira_mainwp_insecure_child_url', 'Remote Novamira MCP connections require verified HTTPS outside a local environment.' );
 		}
 
@@ -133,7 +133,6 @@ final class Remote_MCP_Client {
 					$url,
 					$username,
 					$secret,
-					$token,
 					'',
 					'initialize',
 					array(
@@ -160,7 +159,6 @@ final class Remote_MCP_Client {
 				$url,
 				$username,
 				$secret,
-				$token,
 				$session_id,
 				'notifications/initialized',
 				array(),
@@ -171,16 +169,16 @@ final class Remote_MCP_Client {
 				return $notified;
 			}
 
-			$send = static function ( string $method, array $params = array() ) use ( $url, $username, $secret, $token, &$session_id ) {
-				return self::request( $url, $username, $secret, $token, $session_id, $method, $params, $session_id );
+			$send = static function ( string $method, array $params = array() ) use ( $url, $username, $secret, &$session_id ) {
+				return self::request( $url, $username, $secret, $session_id, $method, $params, $session_id );
 			};
 			return $callback( $send );
 		} catch ( \Throwable $error ) {
 			return new \WP_Error( 'novamira_mainwp_mcp_request_failed', $error->getMessage() );
 		} finally {
-			self::terminate( $url, $username, $secret, $token, $session_id );
+			self::terminate( $url, $username, $secret, $session_id );
 			if ( '' !== $token ) {
-				MainWP_Client::child_call( $site_id, 'lease-release', array( 'token' => $token ) );
+				Runtime_Access::release( $site_id, $token );
 			}
 		}
 	}
@@ -253,12 +251,11 @@ final class Remote_MCP_Client {
 	 * @param array<string, mixed> $params
 	 * @return array<string, mixed>|\WP_Error
 	 */
-	private static function request( string $url, string $username, string $password, string $lease, string $session_id, string $method, array $params, string &$response_session, bool $notification = false ) {
+	private static function request( string $url, string $username, string $password, string $session_id, string $method, array $params, string &$response_session, bool $notification = false ) {
 		$headers = array(
-			'Authorization'           => 'Basic ' . base64_encode( $username . ':' . $password ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-			'Accept'                  => 'application/json, text/event-stream',
-			'Content-Type'            => 'application/json',
-			'X-Novamira-MainWP-Lease' => $lease,
+			'Authorization' => 'Basic ' . base64_encode( $username . ':' . $password ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+			'Accept'        => 'application/json, text/event-stream',
+			'Content-Type'  => 'application/json',
 		);
 		if ( '' !== $session_id ) {
 			$headers['Mcp-Session-Id']       = $session_id;
@@ -341,7 +338,7 @@ final class Remote_MCP_Client {
 		return null;
 	}
 
-	private static function terminate( string $url, string $username, string $password, string $lease, string $session_id ): void {
+	private static function terminate( string $url, string $username, string $password, string $session_id ): void {
 		if ( '' === $session_id ) {
 			return;
 		}
@@ -353,10 +350,9 @@ final class Remote_MCP_Client {
 				'redirection' => 0,
 				'sslverify'   => true,
 				'headers'     => array(
-					'Authorization'           => 'Basic ' . base64_encode( $username . ':' . $password ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
-					'Mcp-Session-Id'          => $session_id,
-					'Mcp-Protocol-Version'    => self::PROTOCOL_VERSION,
-					'X-Novamira-MainWP-Lease' => $lease,
+					'Authorization'        => 'Basic ' . base64_encode( $username . ':' . $password ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+					'Mcp-Session-Id'       => $session_id,
+					'Mcp-Protocol-Version' => self::PROTOCOL_VERSION,
 				),
 			)
 		);

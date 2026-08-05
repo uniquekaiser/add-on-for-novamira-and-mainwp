@@ -12,6 +12,10 @@ final class GatewayRoutingTest extends TestCase {
 	protected function setUp(): void {
 		$GLOBALS['nmm_filters']      = array();
 		$GLOBALS['nmm_mcp_payloads'] = array();
+		$GLOBALS['nmm_child_calls'] = array();
+		$GLOBALS['nmm_options']     = array();
+		$GLOBALS['nmm_scheduled']   = array();
+		$GLOBALS['nmm_mcp_headers'] = array();
 		$GLOBALS['nmm_http_deletes'] = array();
 		$GLOBALS['wpdb']->site_records = array();
 		NMM_Test_MainWP_DB::$sites = array(
@@ -24,10 +28,13 @@ final class GatewayRoutingTest extends TestCase {
 		add_filter(
 			'mainwp_fetchurlauthed',
 			static function ( $plugin_file, $key, int $site_id, string $what, array $params ): array {
-				$GLOBALS['nmm_child_calls'][] = array( $site_id, $what, $params );
-				$action = (string) ( $params['novamira_mainwp_action'] ?? '' );
-				$data   = 'lease-acquire' === $action ? array( 'token' => str_repeat( (string) $site_id, 64 ), 'ttl' => 300 ) : array( 'released' => true );
-				return array( 'novamira_mainwp' => array( 'ok' => true, 'data' => $data ) );
+				$payload = nmm_child_action( $params );
+				$action  = (string) ( $payload['action'] ?? '' );
+				$GLOBALS['nmm_child_calls'][] = array( 'site_id' => $site_id, 'what' => $what, 'action' => $action );
+				$data = 'ai-open' === $action
+					? array( 'changed' => true, 'restore' => array( 'missing' => 'missing-' . $site_id, 'enabled' => '0', 'domain' => 'missing-' . $site_id ) )
+					: array( 'restored' => true );
+				return nmm_child_response( $params, $data );
 			},
 			10,
 			6
@@ -41,6 +48,7 @@ final class GatewayRoutingTest extends TestCase {
 			$payload = json_decode( (string) $args['body'], true );
 			$GLOBALS['nmm_mcp_payloads'][] = $payload;
 			$method  = (string) ( $payload['method'] ?? '' );
+			$GLOBALS['nmm_mcp_headers'][]  = $args['headers'];
 			if ( 'notifications/initialized' === $method ) {
 				return array( 'response' => array( 'code' => 202 ), 'headers' => array(), 'body' => '' );
 			}
@@ -67,15 +75,17 @@ final class GatewayRoutingTest extends TestCase {
 		};
 	}
 
-	public function test_numeric_site_ids_route_to_two_distinct_child_servers_and_cleanup_leases(): void {
+	public function test_numeric_site_ids_route_to_two_distinct_child_servers_and_restore_access_windows(): void {
 		$GLOBALS['nmm_child_calls'] = array();
 		$one = Remote_MCP_Client::call_tool( 1, 'site-one-read', array(), 'read' );
 		$two = Remote_MCP_Client::call_tool( 2, 'site-two-read', array(), 'read' );
 		self::assertSame( 1, $one['structuredContent']['site'] );
 		self::assertSame( 2, $two['structuredContent']['site'] );
 		self::assertCount( 2, $GLOBALS['nmm_http_deletes'] );
-		$actions = array_map( static function ( array $call ): string { return (string) $call[2]['novamira_mainwp_action']; }, $GLOBALS['nmm_child_calls'] );
-		self::assertSame( array( 'lease-acquire', 'lease-release', 'lease-acquire', 'lease-release' ), $actions );
+		self::assertSame( array( 'ai-open', 'ai-restore', 'ai-open', 'ai-restore' ), array_column( $GLOBALS['nmm_child_calls'], 'action' ) );
+		self::assertSame( array( 'code_snippet', 'code_snippet', 'code_snippet', 'code_snippet' ), array_column( $GLOBALS['nmm_child_calls'], 'what' ) );
+		self::assertArrayNotHasKey( 'X-Novamira-MainWP-Lease', $GLOBALS['nmm_mcp_headers'][0] );
+		self::assertArrayNotHasKey( 'X-Novamira-MainWP-Lease', $GLOBALS['nmm_http_deletes'][0][1]['headers'] );
 		$notifications = array_values(
 			array_filter(
 				$GLOBALS['nmm_mcp_payloads'],

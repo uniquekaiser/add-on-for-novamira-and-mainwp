@@ -32,15 +32,15 @@ final class Admin {
 		?>
 		<div class="ui segment novamira-mainwp">
 			<h1 class="ui header"><?php esc_html_e( 'Novamira for MainWP', 'mainwp-novamira-addon' ); ?></h1>
-			<div class="ui secondary pointing menu">
+			<div class="ui labeled icon inverted menu mainwp-sub-submenu">
 				<?php
 				foreach ( array(
-					'fleet'    => 'Fleet',
-					'connect'  => 'Connect',
-					'policies' => 'Policies',
-					'packages' => 'Packages',
-					'audit'    => 'Audit',
-				) as $slug => $label ) :
+					'fleet'    => array( 'Fleet', 'sitemap' ),
+					'connect'  => array( 'Connect', 'linkify' ),
+					'policies' => array( 'Policies', 'shield alternate' ),
+					'packages' => array( 'Packages', 'box' ),
+					'audit'    => array( 'Audit', 'history' ),
+				) as $slug => $item ) :
 					?>
 					<a class="<?php echo $tab === $slug ? 'active ' : ''; ?>item" href="
 					<?php
@@ -54,7 +54,7 @@ final class Admin {
 						)
 					);
 					?>
-								"><?php echo esc_html( $label ); ?></a>
+								"><i class="<?php echo esc_attr( $item[1] ); ?> icon"></i><?php echo esc_html( $item[0] ); ?></a>
 				<?php endforeach; ?>
 			</div>
 			<?php self::render_result(); ?>
@@ -72,7 +72,7 @@ final class Admin {
 			}
 			?>
 		</div>
-		<style>.novamira-mainwp .nmm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem}.novamira-mainwp pre{white-space:pre-wrap;overflow:auto;max-height:420px}.novamira-mainwp .nmm-actions{display:flex;gap:.4rem;flex-wrap:wrap}.novamira-mainwp .nmm-ok{color:#16833d}.novamira-mainwp .nmm-bad{color:#b42318}.novamira-mainwp textarea{width:100%;font-family:monospace}</style>
+		<style>.novamira-mainwp .nmm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem}.novamira-mainwp pre{white-space:pre-wrap;overflow:auto;max-height:420px}.novamira-mainwp .nmm-actions{display:flex;gap:.4rem;flex-wrap:wrap}.novamira-mainwp .nmm-actions form{margin:0}.novamira-mainwp .nmm-ok{color:#16833d;font-weight:600}.novamira-mainwp .nmm-bad{color:#b42318;font-weight:600}.novamira-mainwp textarea{width:100%;font-family:monospace}.novamira-mainwp .nmm-summary{margin:1.5rem 0}.novamira-mainwp .nmm-filters{margin-bottom:1rem}.novamira-mainwp table small{overflow-wrap:anywhere}</style>
 		<?php
 		do_action( 'mainwp_pagefooter_extensions', NOVAMIRA_MAINWP_FILE );
 	}
@@ -136,39 +136,126 @@ final class Admin {
 			self::$result = Storage::set_default_pro_license( $license );
 		} elseif ( 'upload-pro' === $action ) {
 			self::$result = self::upload_package( 'pro' );
-		} elseif ( 'upload-companion' === $action ) {
-			self::$result = self::upload_package( 'companion' );
 		} elseif ( 'create-dashboard-credential' === $action ) {
 			self::$result = self::create_dashboard_credential();
 		}
 	}
 
 	private static function render_fleet(): void {
-		$fleet = Fleet_Service::list_sites( 1, 100 );
+		$fleet       = Fleet_Service::list_sites( 1, 100 );
+		$all_sites   = isset( $fleet['items'] ) && is_array( $fleet['items'] ) ? $fleet['items'] : array();
+		$view        = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'all'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$installed   = count(
+			array_filter(
+				$all_sites,
+				static function ( array $site ): bool {
+					return ! empty( $site['free']['installed'] );
+				}
+			)
+		);
+		$active      = count(
+			array_filter(
+				$all_sites,
+				static function ( array $site ): bool {
+					return ! empty( $site['free']['active'] );
+				}
+			)
+		);
+		$credentials = count(
+			array_filter(
+				$all_sites,
+				static function ( array $site ): bool {
+					return ! empty( $site['credential']['managed'] );
+				}
+			)
+		);
+		$sites       = array_values(
+			array_filter(
+				$all_sites,
+				static function ( array $site ) use ( $view ): bool {
+					if ( 'novamira' === $view ) {
+						return ! empty( $site['free']['installed'] );
+					}
+					if ( 'missing' === $view ) {
+						return empty( $site['free']['installed'] );
+					}
+					return true;
+				}
+			)
+		);
 		?>
-		<p><?php esc_html_e( 'Novamira Free stays unmodified. Our companion add-on supplies the signed child contract and request-scoped gateway lease; Pro remains optional.', 'mainwp-novamira-addon' ); ?></p>
-		<form method="post" id="nmm-bulk-fleet" class="ui form segment"><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="provision"><div class="inline fields"><label>Bulk action</label><select name="operation"><option value="repair-baseline">Repair companion + Free baseline</option><option value="install-companion">Install companion</option><option value="activate-companion">Activate companion</option><option value="update-companion">Deploy companion update</option><option value="install-free">Install Free</option><option value="activate-free">Activate Free</option><option value="update-free">Update Free</option><option value="rotate-credential">Create/rotate credentials</option><option value="revoke-credential">Revoke credentials</option><option value="install-pro">Install optional Pro</option><option value="activate-pro">Activate optional Pro</option><option value="update-pro">Update optional Pro</option></select><button class="ui button" type="submit" name="dry_run" value="1">Preview</button><button class="ui primary button" type="submit" onclick="return window.confirm('Run this action on every selected site?')">Confirm and run</button></div></form>
-		<table class="ui celled table"><thead><tr><th><span class="screen-reader-text">Select</span></th><th>Site</th><th>Companion</th><th>Free</th><th>Pro / license</th><th>AI / policy</th><th>Credential</th><th>Abilities</th><th>Last call</th><th>Actions</th></tr></thead><tbody>
-		<?php foreach ( $fleet['items'] as $site ) : ?>
+		<div class="ui info message"><i class="linkify icon"></i><div class="content"><div class="header"><?php esc_html_e( 'No child companion is required', 'mainwp-novamira-addon' ); ?></div><p><?php esc_html_e( 'Every action uses the authenticated MainWP Child connection already established for each site. Novamira Free and optional Pro are the only Novamira plugins installed on child sites.', 'mainwp-novamira-addon' ); ?></p></div></div>
+		<div class="ui four mini statistics nmm-summary">
+			<div class="statistic"><div class="value"><?php echo esc_html( (string) count( $all_sites ) ); ?></div><div class="label">MainWP sites</div></div>
+			<div class="statistic"><div class="value"><?php echo esc_html( (string) $installed ); ?></div><div class="label">Novamira installed</div></div>
+			<div class="statistic"><div class="value"><?php echo esc_html( (string) $active ); ?></div><div class="label">Novamira active</div></div>
+			<div class="statistic"><div class="value"><?php echo esc_html( (string) $credentials ); ?></div><div class="label">Managed credentials</div></div>
+		</div>
+		<div class="ui compact menu nmm-filters">
+		<?php
+		foreach ( array(
+			'all'      => 'All sites',
+			'novamira' => 'Novamira sites',
+			'missing'  => 'Needs Novamira',
+		) as $filter => $label ) :
+			?>
+			<a class="<?php echo $view === $filter ? 'active ' : ''; ?>item" href="
+			<?php
+			echo esc_url(
+				add_query_arg(
+					array(
+						'page' => 'Extensions-Mainwp-Novamira-Addon',
+						'tab'  => 'fleet',
+						'view' => $filter,
+					),
+					admin_url( 'admin.php' )
+				)
+			);
+			?>
+						"><?php echo esc_html( $label ); ?></a>
+		<?php endforeach; ?>
+		</div>
+		<form method="post" id="nmm-bulk-fleet" class="ui form segment"><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="provision"><div class="inline fields"><label><?php esc_html_e( 'Bulk action', 'mainwp-novamira-addon' ); ?></label><select name="operation"><option value="install-free">Install and activate Free</option><option value="activate-free">Activate Free</option><option value="update-free">Update Free</option><option value="repair-free">Repair Free from upstream</option><option value="enable-ai">Enable AI abilities</option><option value="disable-ai">Disable AI abilities</option><option value="rotate-credential">Create/rotate credentials</option><option value="revoke-credential">Revoke credentials</option><option value="install-pro">Install optional Pro</option><option value="activate-pro">Activate optional Pro</option><option value="update-pro">Update optional Pro</option></select><button class="ui button" type="submit" name="dry_run" value="1"><i class="eye icon"></i>Preview</button><button class="ui green button" type="submit" onclick="return window.confirm('Run this action on every selected site?')"><i class="play icon"></i>Confirm and run</button></div></form>
+		<?php if ( empty( $sites ) ) : ?>
+			<div class="ui placeholder segment"><div class="ui icon header"><i class="plug icon"></i><?php esc_html_e( 'No sites match this view.', 'mainwp-novamira-addon' ); ?></div></div>
+		<?php else : ?>
+		<table class="ui compact celled selectable table"><thead><tr><th><span class="screen-reader-text">Select</span></th><th>Site</th><th>Novamira Free</th><th>Pro / license</th><th>AI / policy</th><th>Credential</th><th>Abilities</th><th>Last call</th><th>Quick actions</th></tr></thead><tbody>
+			<?php foreach ( $sites as $site ) : ?>
 			<tr>
 				<td><input form="nmm-bulk-fleet" type="checkbox" name="site_ids[]" value="<?php echo esc_attr( (string) $site['id'] ); ?>" aria-label="Select <?php echo esc_attr( (string) $site['name'] ); ?>"></td>
-				<td><strong><?php echo esc_html( $site['name'] ); ?></strong><br><small><?php echo esc_html( $site['url'] ); ?></small></td>
-				<td><?php echo esc_html( self::plugin_state( $site['companion'] ) ); ?><br><small><?php echo ! empty( $site['companion']['jit_ready'] ) ? '<span class="nmm-ok">JIT ready</span>' : '<span>Deploy before gateway use</span>'; ?></small></td>
-				<td><?php echo esc_html( self::plugin_state( $site['free'] ) ); ?></td>
-				<td><?php echo esc_html( self::plugin_state( $site['pro'] ) ); ?><br><small><?php echo ! empty( $site['pro']['license_active'] ) ? '<span class="nmm-ok">Licensed</span>' : '<span>Not licensed</span>'; ?></small></td>
-				<td><?php echo ! empty( $site['ai']['manual_enabled'] ) ? '<span class="nmm-ok">Manual on</span>' : '<span>Manual off</span>'; ?><br><small><?php echo esc_html( (string) $site['policy']['ai_lifecycle'] ); ?><?php echo ! empty( $site['policy']['production_allowed'] ) ? ' / production approved' : ' / production denied'; ?></small></td>
-				<td><?php echo ! empty( $site['credential']['managed'] ) ? '<span class="nmm-ok">Managed</span>' : '<span class="nmm-bad">Missing</span>'; ?></td>
-				<td><?php echo ! empty( $site['available_abilities_known'] ) ? esc_html( (string) count( (array) $site['available_abilities'] ) ) : '<span title="Refresh while manually enabled or discover through the gateway">On demand</span>'; ?></td>
+				<td><strong><?php echo esc_html( $site['name'] ); ?></strong><br><small><a href="<?php echo esc_url( $site['url'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $site['url'] ); ?></a></small><?php echo ! empty( $site['sync_error'] ) ? '<br><span class="nmm-bad">Sync issue</span>' : ''; ?></td>
+				<td><?php echo esc_html( self::plugin_state( $site['free'] ) ); ?><?php echo ! empty( $site['free']['update_available'] ) ? '<br><span class="ui tiny orange label">Update ' . esc_html( (string) $site['free']['update_version'] ) . '</span>' : ''; ?></td>
+				<td><?php echo esc_html( self::plugin_state( $site['pro'] ) ); ?><br><small><?php echo ! empty( $site['pro']['license_active'] ) ? '<span class="nmm-ok">Licensed</span>' : 'Optional / not licensed'; ?></small></td>
+				<td><?php echo ! empty( $site['ai']['manual_enabled'] ) ? '<span class="nmm-ok">Enabled</span>' : 'Off'; ?><br><small><?php echo esc_html( (string) $site['policy']['ai_lifecycle'] ); ?><?php echo ! empty( $site['policy']['production_allowed'] ) ? ' / production approved' : ' / production denied'; ?></small></td>
+				<td><?php echo ! empty( $site['credential']['managed'] ) ? '<span class="nmm-ok">Managed</span>' : '<span class="nmm-bad">Missing</span>'; ?><?php echo false === ( $site['credential']['healthy'] ?? null ) ? '<br><small class="nmm-bad">Needs rotation</small>' : ''; ?></td>
+				<td><?php echo ! empty( $site['available_abilities_known'] ) ? esc_html( (string) count( (array) $site['available_abilities'] ) ) : 'On demand'; ?></td>
 				<td><?php echo esc_html( (string) ( $site['last_success'] ?? 'Never' ) ); ?></td>
 				<td><div class="nmm-actions">
 					<?php self::action_button( (int) $site['id'], 'refresh', 'Refresh' ); ?>
-					<?php self::action_button( (int) $site['id'], 'rotate-credential', ! empty( $site['credential']['managed'] ) ? 'Rotate key' : 'Create key' ); ?>
-					<?php self::provision_button( (int) $site['id'], 'repair-baseline', 'Repair baseline' ); ?>
-					<?php self::provision_button( (int) $site['id'], 'install-free', 'Install Free' ); ?>
+					<?php
+					if ( empty( $site['free']['installed'] ) ) :
+						self::provision_button( (int) $site['id'], 'install-free', 'Install Free' );
+						?>
+						<?php
+					elseif ( empty( $site['free']['active'] ) ) :
+						self::provision_button( (int) $site['id'], 'activate-free', 'Activate' );
+						?>
+						<?php
+					else :
+						self::action_button( (int) $site['id'], 'rotate-credential', ! empty( $site['credential']['managed'] ) ? 'Rotate key' : 'Create key' );
+						self::provision_button( (int) $site['id'], ! empty( $site['ai']['manual_enabled'] ) ? 'disable-ai' : 'enable-ai', ! empty( $site['ai']['manual_enabled'] ) ? 'Disable AI' : 'Enable AI' );
+						?>
+					<?php endif; ?>
+					<?php
+					if ( ! empty( $site['free']['update_available'] ) ) :
+						self::provision_button( (int) $site['id'], 'update-free', 'Update' );
+endif;
+					?>
 				</div></td>
 			</tr>
 		<?php endforeach; ?>
 		</tbody></table>
+		<?php endif; ?>
 		<?php
 	}
 
@@ -217,18 +304,26 @@ final class Admin {
 
 	private static function render_packages(): void {
 		$packages = Storage::packages();
+		$free     = Fleet_Service::free_package();
 		?>
-		<div class="nmm-grid"><form method="post" enctype="multipart/form-data" class="ui segment"><h3>Child companion ZIP</h3><p>Required for fleet credentials and gateway routing. Upload the same audited Novamira for MainWP release installed on this Dashboard.</p><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="upload-companion"><input type="file" name="companion_zip" accept=".zip" required><button class="ui primary button" type="submit">Validate and store</button>
+		<div class="ui info message"><i class="cloud download icon"></i><div class="content"><div class="header">Novamira Free is fetched automatically</div><p>There is no child companion package to upload. Install and repair actions validate Novamira Free directly from its HTTPS upstream release metadata before MainWP sends it to selected child sites.</p></div></div>
+		<div class="nmm-grid">
+		<section class="ui segment"><h3 class="ui header"><i class="plug icon"></i><span class="content">Novamira Free<span class="sub header">Required child plugin</span></span></h3>
 		<?php
-		if ( ! empty( $packages['companion'] ) ) :
+		if ( is_wp_error( $free ) ) :
 			?>
-			<p>Stored version <?php echo esc_html( (string) $packages['companion']['version'] ); ?><br><code><?php echo esc_html( (string) $packages['companion']['sha256'] ); ?></code></p><?php endif; ?></form>
-		<form method="post" enctype="multipart/form-data" class="ui segment"><h3>Novamira Pro bootstrap ZIP</h3><p>Optional. Upload an audited release ZIP only when Pro should be centrally deployed.</p><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="upload-pro"><input type="file" name="pro_zip" accept=".zip" required><button class="ui primary button" type="submit">Validate and store</button>
+			<div class="ui warning message"><?php echo esc_html( $free->get_error_message() ); ?></div>
+			<?php
+		else :
+			?>
+			<div class="ui relaxed list"><div class="item"><strong>Version:</strong> <?php echo esc_html( (string) $free['version'] ); ?></div><div class="item"><strong>Source:</strong> <code>license.dynamic.ooo</code></div><div class="item"><strong>Validated SHA-256:</strong><br><code><?php echo esc_html( (string) $free['sha256'] ); ?></code></div></div><?php endif; ?>
+		<p><i class="check circle green icon"></i>No upload is needed.</p></section>
+		<form method="post" enctype="multipart/form-data" class="ui segment"><h3 class="ui header"><i class="upload icon"></i><span class="content">Novamira Pro bootstrap ZIP<span class="sub header">Optional child plugin</span></span></h3><p>Upload an audited Pro release only when Pro should be centrally deployed. Free continues to work normally without it.</p><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="upload-pro"><div class="field"><input type="file" name="pro_zip" accept=".zip" required></div><button class="ui primary button" type="submit"><i class="shield alternate icon"></i>Validate and store Pro</button>
 		<?php
 		if ( ! empty( $packages['pro'] ) ) :
 			?>
-			<p>Stored version <?php echo esc_html( (string) $packages['pro']['version'] ); ?><br><code><?php echo esc_html( (string) $packages['pro']['sha256'] ); ?></code></p><?php endif; ?></form>
-		<form method="post" class="ui segment"><h3>Default Pro license</h3><p>Encrypted by MainWP. A per-site license supplied through the ability overrides this default.</p><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="save-default-license"><input class="fluid" type="password" name="license_key" autocomplete="new-password"><button class="ui primary button" type="submit">Replace default license</button></form></div>
+			<div class="ui positive message">Stored version <?php echo esc_html( (string) $packages['pro']['version'] ); ?><br><code><?php echo esc_html( (string) $packages['pro']['sha256'] ); ?></code></div><?php endif; ?></form>
+		<form method="post" class="ui segment"><h3 class="ui header"><i class="key icon"></i><span class="content">Default Pro license<span class="sub header">Optional and encrypted</span></span></h3><p>A per-site license supplied through the ability overrides this default. Missing or invalid Pro licensing never blocks Free.</p><?php wp_nonce_field( 'novamira_mainwp_admin' ); ?><input type="hidden" name="novamira_mainwp_action" value="save-default-license"><div class="field"><input class="fluid" type="password" name="license_key" autocomplete="new-password"></div><button class="ui primary button" type="submit">Replace default license</button></form></div>
 		<?php
 	}
 
@@ -253,7 +348,7 @@ final class Admin {
 		echo '<div class="ui positive message">' . esc_html__( 'Operation completed.', 'mainwp-novamira-addon' ) . '</div>';
 		if ( is_array( self::$result ) && ! empty( self::$result['dry_run'] ) ) {
 			$ids = isset( self::$result['site_ids'] ) && is_array( self::$result['site_ids'] ) ? array_map( 'absint', self::$result['site_ids'] ) : array();
-			echo '<div class="ui info message"><strong>' . esc_html__( 'Preview only:', 'mainwp-novamira-addon' ) . '</strong> ' . esc_html( (string) ( self::$result['operation'] ?? 'operation' ) ) . ' — ' . esc_html( implode( ', ', $ids ) ) . '</div>';
+			echo '<div class="ui info message"><strong>' . esc_html__( 'Preview only:', 'mainwp-novamira-addon' ) . '</strong> ' . esc_html( (string) ( self::$result['operation'] ?? 'operation' ) ) . ' â€” ' . esc_html( implode( ', ', $ids ) ) . '</div>';
 		}
 		if ( is_array( self::$result ) && isset( self::$result['results'] ) && is_array( self::$result['results'] ) ) {
 			echo '<table class="ui compact celled table"><thead><tr><th>Site ID</th><th>Outcome</th><th>Message</th></tr></thead><tbody>';
@@ -272,7 +367,7 @@ final class Admin {
 			if ( ! is_wp_error( $site ) ) {
 				$url     = trailingslashit( (string) $site['url'] ) . 'wp-json/mcp/novamira';
 				$configs = \Novamira_Provider_Config_Registry::build( $url, (string) self::$result['username'], (string) self::$result['password'], 'novamira-' . (int) self::$result['site_id'], false, 'mainwp-novamira-addon' );
-				echo '<div class="ui warning message"><strong>' . esc_html__( 'Optional direct-site fallback — copy now.', 'mainwp-novamira-addon' ) . '</strong> ' . esc_html__( 'This child credential will not be shown again. The primary setup remains the single MainWP gateway on the Connect tab.', 'mainwp-novamira-addon' ) . '</div><div class="nmm-grid">';
+				echo '<div class="ui warning message"><strong>' . esc_html__( 'Optional direct-site fallback â€” copy now.', 'mainwp-novamira-addon' ) . '</strong> ' . esc_html__( 'This child credential will not be shown again. The primary setup remains the single MainWP gateway on the Connect tab.', 'mainwp-novamira-addon' ) . '</div><div class="nmm-grid">';
 				foreach ( $configs as $client => $config ) {
 					echo '<details class="ui segment"><summary><strong>' . esc_html( ucwords( str_replace( '-', ' ', $client ) ) ) . '</strong></summary><textarea readonly rows="10">' . esc_textarea( (string) $config['code'] ) . '</textarea></details>';
 				}
@@ -284,7 +379,16 @@ final class Admin {
 	/** @param array<string,mixed> $site */
 	private static function site_status_table( array $site ): void {
 		$policy = isset( $site['policy'] ) && is_array( $site['policy'] ) ? $site['policy'] : array();
-		echo '<table class="widefat striped"><tbody><tr><th>URL</th><td>' . esc_html( $site['url'] ) . '</td></tr><tr><th>Companion</th><td>' . esc_html( self::plugin_state( $site['companion'] ) ) . '</td></tr><tr><th>Free</th><td>' . esc_html( self::plugin_state( $site['free'] ) ) . '</td></tr><tr><th>Pro</th><td>' . esc_html( self::plugin_state( $site['pro'] ) ) . ' / ' . ( ! empty( $site['pro']['license_active'] ) ? 'Licensed' : 'Not licensed' ) . '</td></tr><tr><th>AI</th><td>' . ( ! empty( $site['ai']['manual_enabled'] ) ? 'Manually enabled' : 'Manually disabled' ) . ' / ' . esc_html( (string) ( $policy['ai_lifecycle'] ?? 'just-in-time' ) ) . '</td></tr><tr><th>Production</th><td>' . ( ! empty( $policy['production_allowed'] ) ? 'Approved' : 'Denied' ) . '</td></tr><tr><th>Credential</th><td>' . ( ! empty( $site['credential']['managed'] ) ? 'Managed' : 'Missing' ) . '</td></tr><tr><th>Abilities</th><td>' . esc_html( implode( ', ', (array) ( $site['available_abilities'] ?? array() ) ) ) . '</td></tr><tr><th>Last successful call</th><td>' . esc_html( (string) ( $site['last_success'] ?? 'Never' ) ) . '</td></tr></tbody></table>';
+		echo '<table class="widefat striped"><tbody>';
+		echo '<tr><th>URL</th><td>' . esc_html( $site['url'] ) . '</td></tr>';
+		echo '<tr><th>Novamira Free</th><td>' . esc_html( self::plugin_state( $site['free'] ) ) . '</td></tr>';
+		echo '<tr><th>Novamira Pro</th><td>' . esc_html( self::plugin_state( $site['pro'] ) ) . ' / ' . ( ! empty( $site['pro']['license_active'] ) ? 'Licensed' : 'Not licensed' ) . '</td></tr>';
+		echo '<tr><th>AI</th><td>' . ( ! empty( $site['ai']['manual_enabled'] ) ? 'Manually enabled' : 'Manually disabled' ) . ' / ' . esc_html( (string) ( $policy['ai_lifecycle'] ?? 'just-in-time' ) ) . '</td></tr>';
+		echo '<tr><th>Production</th><td>' . ( ! empty( $policy['production_allowed'] ) ? 'Approved' : 'Denied' ) . '</td></tr>';
+		echo '<tr><th>Credential</th><td>' . ( ! empty( $site['credential']['managed'] ) ? 'Managed' : 'Missing' ) . '</td></tr>';
+		echo '<tr><th>Abilities</th><td>' . esc_html( implode( ', ', (array) ( $site['available_abilities'] ?? array() ) ) ) . '</td></tr>';
+		echo '<tr><th>Last successful call</th><td>' . esc_html( (string) ( $site['last_success'] ?? 'Never' ) ) . '</td></tr>';
+		echo '</tbody></table>';
 	}
 
 	private static function action_button( int $site_id, string $action, string $label ): void {
@@ -334,9 +438,11 @@ final class Admin {
 
 	/** @return array<string,mixed>|\WP_Error */
 	private static function upload_package( string $type ) {
-		$is_companion = 'companion' === $type;
-		$field        = $is_companion ? 'companion_zip' : 'pro_zip';
-		$label        = $is_companion ? 'Novamira for MainWP' : 'Novamira Pro';
+		if ( 'pro' !== $type ) {
+			return new \WP_Error( 'novamira_mainwp_package_type_invalid', 'Only an optional Novamira Pro package can be uploaded.' );
+		}
+		$field = 'pro_zip';
+		$label = 'Novamira Pro';
 		// The only caller verifies the administration nonce before dispatching.
 		$upload    = isset( $_FILES[ $field ] ) && is_array( $_FILES[ $field ] ) ? $_FILES[ $field ] : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$temporary = isset( $upload['tmp_name'] ) && is_string( $upload['tmp_name'] ) ? wp_unslash( $upload['tmp_name'] ) : '';
@@ -355,7 +461,7 @@ final class Admin {
 		if ( ! wp_mkdir_p( $target_dir ) ) {
 			return new \WP_Error( 'novamira_mainwp_package_directory_failed', 'Could not create the private MainWP package directory.' );
 		}
-		$target = $target_dir . ( $is_companion ? 'mainwp-novamira-addon-' : 'novamira-pro-' ) . sanitize_file_name( (string) $inspection['version'] ) . '.zip';
+		$target = $target_dir . 'novamira-pro-' . sanitize_file_name( (string) $inspection['version'] ) . '.zip';
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		if ( ! WP_Filesystem() ) {
 			return new \WP_Error( 'novamira_mainwp_filesystem_unavailable', 'WordPress could not initialize its filesystem for the validated Pro ZIP.' );
@@ -380,10 +486,9 @@ final class Admin {
 
 	/** @return array{version:string}|\WP_Error */
 	private static function inspect_package_zip( string $path, string $type ) {
-		$is_companion  = 'companion' === $type;
-		$root          = $is_companion ? 'mainwp-novamira-addon/' : 'novamira-pro/';
-		$main_file     = $root . ( $is_companion ? 'mainwp-novamira-addon.php' : 'novamira-pro.php' );
-		$expected_name = $is_companion ? 'Novamira for MainWP' : 'Novamira Pro';
+		$root          = 'novamira-pro/';
+		$main_file     = $root . 'novamira-pro.php';
+		$expected_name = 'Novamira Pro';
 		if ( ! class_exists( 'ZipArchive' ) ) {
 			return new \WP_Error( 'novamira_mainwp_zip_unavailable', 'ZipArchive is required to inspect plugin packages.' );
 		}

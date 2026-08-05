@@ -25,12 +25,14 @@ final class DashboardCredentialRotationTest extends TestCase {
 		add_filter(
 			'mainwp_fetchurlauthed',
 			static function ( $plugin_file, $key, int $site_id, string $what, array $params ): array {
-				$action = (string) ( $params['novamira_mainwp_action'] ?? '' );
-				$GLOBALS['nmm_dashboard_calls'][] = array( 'action' => $action, 'params' => $params['novamira_mainwp_params'] ?? array() );
+				$payload = nmm_child_action( $params );
+				$action  = (string) ( $payload['action'] ?? '' );
+				$input   = isset( $payload['params'] ) && is_array( $payload['params'] ) ? $payload['params'] : array();
+				$GLOBALS['nmm_dashboard_calls'][] = array( 'action' => $action, 'params' => $input, 'what' => $what );
 				$data = 'credential-create' === $action
 					? array( 'username' => 'admin', 'password' => 'new-password', 'uuid' => 'new-uuid', 'created' => time() )
 					: array( 'revoked' => true );
-				return array( 'novamira_mainwp' => array( 'ok' => true, 'data' => $data ) );
+				return nmm_child_response( $params, $data );
 			},
 			10,
 			6
@@ -54,6 +56,7 @@ final class DashboardCredentialRotationTest extends TestCase {
 		self::assertSame( 'new-uuid', $result['uuid'] );
 		self::assertSame( 'new-uuid', $stored['credential_uuid'] );
 		self::assertSame( array( 'credential-create', 'credential-revoke' ), array_column( $GLOBALS['nmm_dashboard_calls'], 'action' ) );
+		self::assertSame( array( 'code_snippet', 'code_snippet' ), array_column( $GLOBALS['nmm_dashboard_calls'], 'what' ) );
 		self::assertSame( 'old-uuid', $GLOBALS['nmm_dashboard_calls'][1]['params']['uuid'] );
 		self::assertNotContains( 'old_uuid', array_keys( $GLOBALS['nmm_dashboard_calls'][0]['params'] ) );
 	}

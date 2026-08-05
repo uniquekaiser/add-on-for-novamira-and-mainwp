@@ -4,7 +4,7 @@ Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.2.4
+Stable tag: 0.3.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -12,7 +12,7 @@ Manage unmodified Novamira Free sites and route approved child MCP servers throu
 
 == Description ==
 
-The same independently owned plugin runs as the Dashboard control plane and as a narrow MainWP Child companion. The companion owns the signed child contract, application-password lifecycle, policies, and request-scoped five-minute leases. Novamira Free is not modified, bundled, or repackaged.
+This independently owned plugin runs only on the MainWP Dashboard. It uses each site's existing authenticated MainWP Child connection for one-shot status, settings, and application-password operations; no extra companion plugin is installed on client sites. Novamira Free is not modified, bundled, or repackaged.
 
 On the Dashboard, the add-on provides fleet status, package deployment, encrypted credentials, redacted auditing, provider configurations, and the novamira-mainwp routed ability namespace. MainWP MCP Bridge keeps control of its existing exposure, policy, rate-limit, resource, prompt, and confirmation architecture.
 
@@ -25,8 +25,8 @@ Official packages update from the public GitHub Releases page. Only the exact ve
 == Installation ==
 
 1. Install MainWP Dashboard, MainWP MCP Bridge, and Novamira for MainWP on the Dashboard.
-2. Build or obtain the audited Novamira for MainWP ZIP and upload it on the Packages screen.
-3. Use Repair companion + Free baseline to deploy this companion and upstream Novamira Free to selected child sites.
+2. Use Fleet to install or activate validated upstream Novamira Free on selected child sites.
+3. Optionally upload an audited Novamira Pro ZIP on Packages.
 4. Approve each production site's policy and create its managed credential.
 5. Create a one-time Dashboard application password on Connect and add the displayed MainWP profile to the AI client.
 
@@ -34,6 +34,13 @@ Official packages update from the public GitHub Releases page. Only the exact ve
 
 = 0.2.4 =
 * [IMPROVE] Ensured future updates show the target release notes, WordPress and PHP requirements, and plugin icon before installation.
+= 0.3.0 =
+* [NEW] Rebuilt child management around MainWP Child's existing signed connection; no companion plugin is installed on client sites.
+* [FIX] Listed all accessible MainWP sites by omitting the empty legacy search argument that returned an empty fleet on MainWP 6.1.
+* [IMPROVE] Applied MainWP's labeled-icon extension navigation, fleet summaries, filters, contextual actions, and package cards.
+* [SECURITY] Added Dashboard-owned five-minute AI access windows with prior-value restoration, concurrent-call tracking, and crash-safe cleanup.
+* [COMPAT] Kept Novamira Free fully functional when Pro is absent, invalid, expired, or unreachable.
+
 * [DEV] Completed cross-version update verification against the published GitHub release asset.
 
 = 0.2.3 =

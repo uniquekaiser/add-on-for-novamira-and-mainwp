@@ -2,6 +2,15 @@
 
 All notable changes to Novamira for MainWP are documented here.
 
+## 0.3.0 - 2026-08-05
+
+- [NEW] Replaced the child companion architecture with signed, non-persistent one-shot operations over the existing MainWP Child connection.
+- [FIX] Restored the fleet inventory on MainWP 6.1 by no longer passing an empty legacy site-search parameter.
+- [IMPROVE] Rebuilt the extension navigation, fleet summaries, filters, contextual actions, and Packages view using MainWP's own extension UI patterns.
+- [SECURITY] Added Dashboard-owned five-minute AI access windows with exact prior-value restoration, concurrent-call tracking, WP-Cron cleanup, and no custom child code installation.
+- [COMPAT] Kept Novamira Free as the only required child plugin and isolated all optional Pro installation and licensing failures.
+- [DEV] Replaced companion contract tests with one-shot transport, runtime restoration, routing, credential, and Pro-isolation coverage.
+
 ## 0.2.4 - 2026-08-04
 
 - [IMPROVE] Ensured future updates show the target release notes, WordPress and PHP requirements, and plugin icon before installation.

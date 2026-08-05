@@ -11,7 +11,6 @@ namespace Novamira\MainWP;
 
 final class Plugin {
 	public static function activate(): void {
-		Child_Companion::repair_load_order();
 		if ( MainWP_Client::ready() ) {
 			Storage::install();
 		}
@@ -19,9 +18,7 @@ final class Plugin {
 
 	public static function boot(): void {
 		if ( ! MainWP_Client::ready() ) {
-			if ( ! Child_Companion::is_child_site() ) {
-				add_action( 'admin_notices', array( self::class, 'dependency_notice' ) );
-			}
+			add_action( 'admin_notices', array( self::class, 'dependency_notice' ) );
 			return;
 		}
 		if ( get_option( 'novamira_mainwp_db_version' ) !== NOVAMIRA_MAINWP_VERSION ) {
@@ -34,6 +31,8 @@ final class Plugin {
 		add_action( 'wp_abilities_api_categories_init', array( Abilities::class, 'register_category' ) );
 		add_action( 'wp_abilities_api_init', array( Abilities::class, 'register' ) );
 		add_action( 'admin_notices', array( self::class, 'dependency_notice' ) );
+		add_action( 'novamira_mainwp_runtime_cleanup', array( Runtime_Access::class, 'cleanup' ), 10, 2 );
+		Runtime_Access::recover_expired();
 	}
 
 	/** @param array<int, array<string, mixed>> $extensions @return array<int, array<string, mixed>> */

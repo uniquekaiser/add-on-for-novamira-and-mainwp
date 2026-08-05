@@ -4,7 +4,7 @@
 declare( strict_types=1 );
 
 define( 'ABSPATH', __DIR__ . '/tmp-wordpress/' );
-define( 'NOVAMIRA_MAINWP_VERSION', '0.2.4' );
+define( 'NOVAMIRA_MAINWP_VERSION', '0.3.0' );
 define( 'NOVAMIRA_MAINWP_DIR', dirname( __DIR__ ) . '/' );
 define( 'NOVAMIRA_MAINWP_FILE', dirname( __DIR__ ) . '/mainwp-novamira-addon.php' );
 define( 'ARRAY_A', 'ARRAY_A' );
@@ -21,6 +21,7 @@ $GLOBALS['nmm_looks_production']    = false;
 $GLOBALS['nmm_ability_rules']       = array();
 $GLOBALS['nmm_http_handler']        = null;
 $GLOBALS['nmm_http_deletes']        = array();
+$GLOBALS['nmm_scheduled']           = array();
 
 class WP_Error {
 	private $code;
@@ -116,13 +117,40 @@ function novamira_is_valid_ability_name( string $name ): bool { return 1 === pre
 function novamira_get_ability_rules(): array { return $GLOBALS['nmm_ability_rules']; }
 function novamira_update_ability_rules( array $rules ): void { $GLOBALS['nmm_ability_rules'] = $rules; }
 
+function wp_generate_password( int $length = 12, bool $special_chars = true, bool $extra_special_chars = false ): string { return substr( str_repeat( 'a1b2c3d4', 16 ), 0, $length ); }
+function wp_schedule_single_event( int $timestamp, string $hook, array $args = array() ): bool { $GLOBALS['nmm_scheduled'][] = compact( 'timestamp', 'hook', 'args' ); return true; }
+function wp_next_scheduled( string $hook, array $args = array() ) {
+	foreach ( $GLOBALS['nmm_scheduled'] as $event ) {
+		if ( $hook === $event['hook'] && $args === $event['args'] ) return $event['timestamp'];
+	}
+	return false;
+}
+function wp_unschedule_event( int $timestamp, string $hook, array $args = array() ): bool {
+	foreach ( $GLOBALS['nmm_scheduled'] as $index => $event ) {
+		if ( $timestamp === $event['timestamp'] && $hook === $event['hook'] && $args === $event['args'] ) unset( $GLOBALS['nmm_scheduled'][ $index ] );
+	}
+	$GLOBALS['nmm_scheduled'] = array_values( $GLOBALS['nmm_scheduled'] );
+	return true;
+}
+function nmm_child_action( array $params ): array {
+	$code = isset( $params['code'] ) ? (string) $params['code'] : '';
+	if ( 1 !== preg_match( "/base64_decode\\( '([^']+)' \\)/", $code, $matches ) ) return array();
+	$decoded = json_decode( (string) base64_decode( $matches[1], true ), true );
+	return is_array( $decoded ) ? $decoded : array();
+}
+function nmm_child_response( array $params, array $data = array(), bool $ok = true, string $code = '', string $message = '' ): array {
+	$body = array( 'ok' => $ok, 'data' => $data );
+	if ( ! $ok ) $body['error'] = array( 'code' => $code, 'message' => $message );
+	return array( 'status' => 'SUCCESS', 'result' => "\nNOVAMIRA_MAINWP_RESULT:" . base64_encode( wp_json_encode( $body ) ) . "\n" );
+}
 require_once dirname( __DIR__ ) . '/includes/provider-config-registry.php';
 require_once dirname( __DIR__ ) . '/includes/class-github-updater.php';
 require_once dirname( __DIR__ ) . '/includes/class-crypto.php';
 require_once dirname( __DIR__ ) . '/includes/class-storage.php';
 require_once dirname( __DIR__ ) . '/includes/class-audit.php';
+require_once dirname( __DIR__ ) . '/includes/class-child-runtime.php';
 require_once dirname( __DIR__ ) . '/includes/class-mainwp-client.php';
+require_once dirname( __DIR__ ) . '/includes/class-runtime-access.php';
 require_once dirname( __DIR__ ) . '/includes/class-remote-mcp-client.php';
 require_once dirname( __DIR__ ) . '/includes/class-fleet-service.php';
 require_once dirname( __DIR__ ) . '/includes/class-abilities.php';
-require_once dirname( __DIR__ ) . '/includes/class-child-companion.php';

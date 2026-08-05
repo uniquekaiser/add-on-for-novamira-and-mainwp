@@ -12,7 +12,6 @@ namespace Novamira\MainWP;
 final class Fleet_Service {
 	private const FREE_INFO_URL    = 'https://license.dynamic.ooo/api/novamira/info';
 	private const MIN_FREE_VERSION = '1.11.1';
-	private const COMPANION_PLUGIN = 'mainwp-novamira-addon/mainwp-novamira-addon.php';
 	private const FREE_PLUGIN      = 'novamira/novamira.php';
 	private const PRO_PLUGIN       = 'novamira-pro/novamira-pro.php';
 
@@ -32,6 +31,10 @@ final class Fleet_Service {
 		);
 	}
 
+	/** @return array<string,mixed>|\WP_Error */
+	public static function free_package() {
+		return self::free_release();
+	}
 	/** @return array<string, mixed>|\WP_Error */
 	public static function get_site( int $site_id, bool $refresh = false ) {
 		$site = MainWP_Client::site( $site_id );
@@ -80,13 +83,10 @@ final class Fleet_Service {
 			'allowed_abilities'   => self::ability_names( $policy['allowed_abilities'] ?? array() ),
 			'disabled_abilities'  => self::ability_names( $policy['disabled_abilities'] ?? array() ),
 		);
-		$remote = MainWP_Client::child_call(
+		$remote = MainWP_Client::child_operation(
 			$site_id,
-			'set-policy',
+			'set-rules',
 			array(
-				'gateway_enabled'    => $clean['gateway_enabled'],
-				'production_allowed' => $clean['production_allowed'],
-				'ai_lifecycle'       => $clean['ai_lifecycle'],
 				'disabled_abilities' => $clean['disabled_abilities'],
 			)
 		);
@@ -110,7 +110,7 @@ final class Fleet_Service {
 		}
 		$stored = Storage::get_site( $site_id );
 		$host   = (string) wp_parse_url( home_url(), PHP_URL_HOST );
-		$result = MainWP_Client::child_call(
+		$result = MainWP_Client::child_operation(
 			$site_id,
 			'credential-create',
 			array(
@@ -125,7 +125,7 @@ final class Fleet_Service {
 		$password  = isset( $result['password'] ) ? (string) $result['password'] : '';
 		$encrypted = Crypto::encrypt( $password );
 		if ( is_wp_error( $encrypted ) ) {
-			MainWP_Client::child_call(
+			MainWP_Client::child_operation(
 				$site_id,
 				'credential-revoke',
 				array(
@@ -151,7 +151,7 @@ final class Fleet_Service {
 		}
 		$warning = '';
 		if ( '' !== $old_uuid ) {
-			$revoked = MainWP_Client::child_call(
+			$revoked = MainWP_Client::child_operation(
 				$site_id,
 				'credential-revoke',
 				array(
@@ -192,7 +192,7 @@ final class Fleet_Service {
 				'message' => 'No managed credential exists.',
 			);
 		}
-		$result = MainWP_Client::child_call(
+		$result = MainWP_Client::child_operation(
 			$site_id,
 			'credential-revoke',
 			array(
@@ -224,7 +224,7 @@ final class Fleet_Service {
 	 * @return array<string, mixed>
 	 */
 	public static function provision( array $site_ids, string $operation, bool $dry_run ): array {
-		$allowed = array( 'install-companion', 'activate-companion', 'update-companion', 'repair-baseline', 'install-free', 'activate-free', 'update-free', 'install-pro', 'activate-pro', 'update-pro' );
+		$allowed = array( 'repair-free', 'install-free', 'activate-free', 'update-free', 'enable-ai', 'disable-ai', 'install-pro', 'activate-pro', 'update-pro' );
 		if ( ! in_array( $operation, $allowed, true ) ) {
 			return array( 'error' => 'Unsupported provisioning operation.' );
 		}
@@ -400,7 +400,7 @@ final class Fleet_Service {
 				}
 			}
 		}
-		$result = MainWP_Client::child_call(
+		$result = MainWP_Client::child_operation(
 			$site_id,
 			'pro-license',
 			array(
@@ -414,33 +414,15 @@ final class Fleet_Service {
 
 	/** @return array<string, mixed>|\WP_Error */
 	private static function provision_one( int $site_id, string $operation ) {
-		if ( 'install-companion' === $operation || 'update-companion' === $operation ) {
-			$packages = Storage::packages();
-			if ( empty( $packages['companion']['download_url'] ) ) {
-				return new \WP_Error( 'novamira_mainwp_companion_package_missing', 'Upload an audited Novamira for MainWP ZIP first.' );
-			}
-			return MainWP_Client::install_plugin( $site_id, (string) $packages['companion']['download_url'], true, 'update-companion' === $operation );
-		}
-		if ( 'activate-companion' === $operation ) {
-			return MainWP_Client::activate_plugin( $site_id, self::COMPANION_PLUGIN );
-		}
-		if ( 'repair-baseline' === $operation ) {
-			$packages = Storage::packages();
-			if ( empty( $packages['companion']['download_url'] ) ) {
-				return new \WP_Error( 'novamira_mainwp_companion_package_missing', 'Upload an audited Novamira for MainWP ZIP before repairing the baseline.' );
-			}
-			$companion = MainWP_Client::install_plugin( $site_id, (string) $packages['companion']['download_url'], true, true );
-			if ( is_wp_error( $companion ) ) {
-				return $companion;
-			}
+		if ( 'repair-free' === $operation ) {
 			$release = self::free_release();
-			if ( is_wp_error( $release ) ) {
-				return $release;
-			}
-			$free = MainWP_Client::install_plugin( $site_id, (string) $release['download_url'], true, true );
-			return is_wp_error( $free ) ? $free : array(
-				'companion' => $companion,
-				'free'      => $free,
+			return is_wp_error( $release ) ? $release : MainWP_Client::install_plugin( $site_id, (string) $release['download_url'], true, true );
+		}
+		if ( in_array( $operation, array( 'enable-ai', 'disable-ai' ), true ) ) {
+			return MainWP_Client::child_operation(
+				$site_id,
+				'ai-set',
+				array( 'enabled' => 'enable-ai' === $operation )
 			);
 		}
 		if ( 'install-free' === $operation ) {
@@ -579,16 +561,15 @@ final class Fleet_Service {
 
 	/** @param object $site @param array<string,mixed> $stored @param array<string,mixed> $status */
 	private static function format_site( $site, array $stored, array $status ): array {
-		$companion = isset( $status['companion'] ) && is_array( $status['companion'] )
-			? $status['companion']
-			: self::plugin_inventory_status( $site, self::COMPANION_PLUGIN );
-		$free      = isset( $status['free'] ) && is_array( $status['free'] )
-			? $status['free']
-			: self::plugin_inventory_status( $site, self::FREE_PLUGIN );
-		$pro       = isset( $status['pro'] ) && is_array( $status['pro'] )
-			? $status['pro']
+		$free_inventory = self::plugin_inventory_status( $site, self::FREE_PLUGIN );
+		$pro_inventory  = self::plugin_inventory_status( $site, self::PRO_PLUGIN );
+		$free           = isset( $status['free'] ) && is_array( $status['free'] )
+			? array_merge( $free_inventory, $status['free'] )
+			: $free_inventory;
+		$pro            = isset( $status['pro'] ) && is_array( $status['pro'] )
+			? array_merge( $pro_inventory, array( 'license_active' => false ), $status['pro'] )
 			: array_merge(
-				self::plugin_inventory_status( $site, self::PRO_PLUGIN ),
+				$pro_inventory,
 				array( 'license_active' => false )
 			);
 
@@ -603,7 +584,6 @@ final class Fleet_Service {
 				'username' => (string) $stored['credential_username'],
 				'healthy'  => $status['application_passwords']['credential_healthy'] ?? null,
 			),
-			'companion'                 => $companion,
 			'free'                      => $free,
 			'pro'                       => $pro,
 			'ai'                        => $status['ai'] ?? array(),
@@ -617,7 +597,7 @@ final class Fleet_Service {
 
 	/**
 	 * Fall back to MainWP's last synchronized plugin inventory when the child
-	 * contract is not installed or active yet.
+	 * one-shot status operation is unavailable.
 	 *
 	 * @param object $site MainWP site row.
 	 * @return array<string, mixed>

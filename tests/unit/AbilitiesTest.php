@@ -18,7 +18,8 @@ final class AbilitiesTest extends TestCase {
 		self::assertArrayHasKey( 'dry_run', $write['input_schema']['properties'] );
 		self::assertTrue( $GLOBALS['nmm_abilities']['novamira-mainwp/list-sites-v1']['meta']['annotations']['readonly'] );
 		$operations = $GLOBALS['nmm_abilities']['novamira-mainwp/provision-sites-v1']['input_schema']['properties']['operation']['enum'];
-		self::assertContains( 'install-companion', $operations );
-		self::assertContains( 'repair-baseline', $operations );
+		self::assertContains( 'install-free', $operations );
+		self::assertContains( 'repair-free', $operations );
+		self::assertContains( 'disable-ai', $operations );
 	}
 }

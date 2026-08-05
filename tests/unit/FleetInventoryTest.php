@@ -17,7 +17,7 @@ final class FleetInventoryTest extends TestCase {
 		);
 	}
 
-	public function test_synced_inventory_reports_inactive_free_and_active_pro_without_child_contract(): void {
+	public function test_synced_inventory_reports_inactive_free_and_active_optional_pro(): void {
 		NMM_Test_MainWP_DB::$sites = array(
 			12 => (object) array(
 				'id'              => 12,
@@ -26,7 +26,6 @@ final class FleetInventoryTest extends TestCase {
 				'suspended'       => 0,
 				'plugins'         => wp_json_encode(
 					array(
-						'mainwp-novamira-addon/mainwp-novamira-addon.php' => array( 'name' => 'Novamira for MainWP', 'version' => '0.2.0', 'active' => true ),
 						'novamira/novamira.php' => array( 'name' => 'Novamira', 'version' => '1.11.2', 'active' => false ),
 						array( 'slug' => 'novamira-pro/novamira-pro.php', 'name' => 'Novamira Pro', 'version' => '1.8.1', 'active' => true ),
 					)
@@ -42,8 +41,6 @@ final class FleetInventoryTest extends TestCase {
 		$result = Fleet_Service::list_sites();
 
 		self::assertCount( 1, $result['items'] );
-		self::assertTrue( $result['items'][0]['companion']['active'] );
-		self::assertSame( '0.2.0', $result['items'][0]['companion']['version'] );
 		self::assertTrue( $result['items'][0]['free']['installed'] );
 		self::assertFalse( $result['items'][0]['free']['active'] );
 		self::assertSame( '1.11.2', $result['items'][0]['free']['version'] );

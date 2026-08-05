@@ -14,7 +14,7 @@ final class GithubUpdaterTest extends TestCase {
 	/** @return array<string, array{string}> */
 	public function accepted_assets(): array {
 		return array(
-			'current'     => array( 'mainwp-novamira-addon-0.2.4.zip' ),
+			'current'     => array( 'mainwp-novamira-addon-0.3.0.zip' ),
 			'multi-digit' => array( 'mainwp-novamira-addon-12.34.56.zip' ),
 		);
 	}

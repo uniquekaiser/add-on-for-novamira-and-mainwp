@@ -1,11 +1,8 @@
 # Novamira for MainWP
 
-Novamira for MainWP is one independently owned plugin with two roles:
+Novamira for MainWP is an independently owned, Dashboard-only MainWP extension.
 
-- On the MainWP Dashboard it provides fleet management, encrypted credentials, policies, packages, auditing, provider configurations, and the routed MCP gateway.
-- On a MainWP Child site it acts as a narrow companion beside the unmodified Novamira Free plugin and exposes the authenticated MainWP child contract.
-
-Novamira Free remains an upstream dependency and is never patched or repackaged. Novamira Pro is optional and never gates Free fleet management or the MCP gateway.
+It provides fleet management, encrypted credentials, policies, package deployment, auditing, provider configurations, and the routed MCP gateway. Child operations use the authenticated connection already provided by MainWP Child; no Novamira for MainWP plugin is installed on client sites. Novamira Free remains an upstream dependency and is never patched or repackaged. Novamira Pro is optional and never gates Free fleet management or the MCP gateway.
 
 This is an independent integration project and is not maintained by or affiliated with Novamira or MainWP.
 
@@ -20,17 +17,15 @@ This is an independent integration project and is not maintained by or affiliate
 ## Deployment order
 
 1. Install the add-on and MainWP MCP Bridge on the Dashboard.
-2. Build the add-on ZIP, then upload that same audited ZIP on the Packages screen.
-3. Use **Repair companion + Free baseline** to deploy the companion and upstream Novamira Free to child sites.
+2. Use Fleet to install or activate upstream Novamira Free on selected MainWP sites. The add-on validates the HTTPS metadata and package before MainWP deploys it.
+3. Optionally upload an audited Novamira Pro ZIP on Packages.
 4. Approve production access per site, create managed child credentials, and create the one-time Dashboard MCP profile.
-
-The companion activation routine puts itself before Novamira in WordPress's active-plugin order. This is required because it must validate an incoming lease before stock Novamira reads its enablement settings.
 
 ## Security model
 
 The gateway accepts only numeric MainWP site IDs, resolves them from MainWP, and checks the authenticated Dashboard user's access. It never accepts a child destination URL from MCP arguments. Child application passwords are returned once over MainWP's signed channel and immediately encrypted on the Dashboard.
 
-When Novamira is manually off, a routed operation obtains an independent five-minute token over the signed MainWP channel. The child companion stores only its keyed hash. A request carrying the valid token receives request-local `pre_option_novamira_ai_abilities_enabled` and domain values before Novamira loads. No Novamira file or saved Novamira setting changes. The lease is released after the operation, and expiry supplies crash-safe cleanup. Production JIT access is denied until explicitly approved.
+When Novamira is manually off, a routed operation opens a five-minute Dashboard-owned access window through MainWP Child's signed, built-in one-shot Code Snippets operation. The operation is evaluated only for that authenticated request and is never saved as a child snippet. The Dashboard records the previous Novamira option values, restores them after the final concurrent gateway call, and schedules crash-safe cleanup. Manually enabled sites remain enabled, and production access is denied until explicitly approved.
 
 Audit records contain only actor, site, operation, outcome, duration, correlation ID, and argument-key names. Credentials, license keys, argument values, and remote results are never written to the audit table.
 
@@ -46,7 +41,7 @@ Pro is optional. Administrators may upload a release ZIP that passes root, path,
 
 ## Distribution build
 
-Install Composer dependencies, then run `node tools/build-dist.mjs` from this plugin directory. It creates one independently installable and inspected add-on ZIP in `dist/`. No Novamira Free package is built or distributed.
+Install Composer dependencies, then run `node tools/build-dist.mjs` from this plugin directory. It creates one independently installable and inspected Dashboard add-on ZIP in `dist/`. No child companion or Novamira Free package is built or distributed.
 
 ## Updates
 

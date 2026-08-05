@@ -39,14 +39,18 @@ final class MainWP_Client {
 		}
 		$page     = max( 1, $page );
 		$per_page = max( 1, min( 100, $per_page ) );
-		$rows     = \MainWP\Dashboard\MainWP_DB::instance()->get_websites_for_current_user(
-			array(
-				'search_site' => $search,
-				'offset'      => ( $page - 1 ) * $per_page,
-				'rowcount'    => $per_page,
-				'full_data'   => true,
-			)
+		$args     = array(
+			'paged'          => $page,
+			'items_per_page' => $per_page,
+			'offset'         => ( $page - 1 ) * $per_page,
+			'rowcount'       => $per_page,
+			'full_data'      => true,
+			'fields'         => array( 'id', 'name', 'url', 'adminname', 'plugins', 'plugin_upgrades', 'suspended', 'sync_errors' ),
 		);
+		if ( '' !== trim( $search ) ) {
+			$args['s'] = trim( $search );
+		}
+		$rows = \MainWP\Dashboard\MainWP_DB::instance()->get_websites_for_current_user( $args );
 		return is_array( $rows ) ? array_values( array_filter( $rows, 'is_object' ) ) : array();
 	}
 
@@ -54,7 +58,7 @@ final class MainWP_Client {
 	 * @param array<string, mixed> $params
 	 * @return array<string, mixed>|\WP_Error
 	 */
-	public static function child_call( int $site_id, string $action, array $params = array() ) {
+	public static function child_operation( int $site_id, string $action, array $params = array() ) {
 		$site = self::site( $site_id );
 		if ( is_wp_error( $site ) ) {
 			return $site;
@@ -62,33 +66,24 @@ final class MainWP_Client {
 
 		$response = self::fetch(
 			$site_id,
-			'extra_execution',
+			'code_snippet',
 			array(
-				'novamira_mainwp_contract' => 'v1',
-				'novamira_mainwp_action'   => $action,
-				'novamira_mainwp_params'   => $params,
+				'action' => 'run_snippet',
+				'type'   => 'R',
+				'slug'   => 'novamira-mainwp-runtime',
+				'code'   => Child_Runtime::script( $action, $params ),
 			)
 		);
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
-		if ( ! isset( $response['novamira_mainwp'] ) || ! is_array( $response['novamira_mainwp'] ) ) {
-			return new \WP_Error( 'novamira_mainwp_child_contract_missing', 'The child site does not expose the Novamira MainWP v1 contract.' );
-		}
-		$contract = $response['novamira_mainwp'];
-		if ( true !== ( $contract['ok'] ?? false ) ) {
-			$error   = isset( $contract['error'] ) && is_array( $contract['error'] ) ? $contract['error'] : array();
-			$code    = isset( $error['code'] ) ? sanitize_key( (string) $error['code'] ) : 'novamira_mainwp_child_error';
-			$message = isset( $error['message'] ) ? (string) $error['message'] : 'The Novamira child action failed.';
-			return new \WP_Error( $code, $message, $error['data'] ?? null );
-		}
-		return isset( $contract['data'] ) && is_array( $contract['data'] ) ? $contract['data'] : array();
+		return Child_Runtime::decode( $response );
 	}
 
 	/** @return array<string, mixed>|\WP_Error */
 	public static function status( int $site_id ) {
 		$stored = Storage::get_site( $site_id );
-		return self::child_call(
+		return self::child_operation(
 			$site_id,
 			'status',
 			array(

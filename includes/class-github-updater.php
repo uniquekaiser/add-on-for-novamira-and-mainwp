@@ -122,7 +122,7 @@ final class GitHub_Updater {
 		} elseif ( '' !== $local_changelog ) {
 			$sections['changelog'] = $local_changelog;
 		} elseif ( empty( $sections['changelog'] ) ) {
-			$sections['changelog'] = '<h4>0.2.4</h4><ul><li><strong>[IMPROVE]</strong> Completed the WordPress update metadata.</li></ul>';
+			$sections['changelog'] = '<h4>0.3.0</h4><ul><li><strong>[IMPROVE]</strong> Completed the WordPress update metadata.</li></ul>';
 		}
 		$info->sections = $sections;
 
