@@ -8,7 +8,7 @@ Stable tag: 0.5.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Manage unmodified Novamira Free sites and route approved child MCP servers through one MainWP MCP connection. Pro remains optional.
+Unofficial community add-on for Novamira and MainWP; not maintained by the Novamira or MainWP development teams.
 
 == Description ==
 
@@ -18,7 +18,9 @@ On the Dashboard, the add-on provides fleet status, package deployment, encrypte
 
 Novamira Free provides the MCP server and abilities. Pro controls remain optional: child installations can use a validated package built from the Pro copy installed on the MainWP Dashboard or an administrator-uploaded audited ZIP.
 
-This is an independent integration project and is not maintained by or affiliated with Novamira or MainWP.
+Novamira for MainWP is an unofficial community project. It is not affiliated with, endorsed by, or maintained by the Novamira or MainWP development teams.
+
+Report add-on bugs, feature requests, and feedback at https://github.com/uniquekaiser/novamira-for-mainwp/issues. Please do not direct add-on-specific support requests to the Novamira or MainWP development teams.
 
 Official packages update from the public GitHub Releases page. Only the exact versioned plugin ZIP attached to the latest stable Release is accepted; GitHub source archives are never used.
 

@@ -1,10 +1,14 @@
 # Novamira for MainWP
 
-Novamira for MainWP is an independently owned, Dashboard-only MainWP extension.
+Novamira for MainWP is an unofficial, community-maintained, Dashboard-only MainWP extension.
 
 It provides fleet management, encrypted credentials, policies, package deployment, auditing, provider configurations, and the routed MCP gateway. Child operations use the authenticated connection already provided by MainWP Child; no Novamira for MainWP plugin is installed on client sites. Novamira Free remains an upstream dependency and is never patched or repackaged. Novamira Pro is optional and never gates Free fleet management or the MCP gateway.
 
-This is an independent integration project and is not maintained by or affiliated with Novamira or MainWP.
+This project is not an official Novamira or MainWP product. It is not affiliated with, endorsed by, or maintained by the Novamira or MainWP development teams.
+
+## Support and feedback
+
+Report bugs, request features, and provide feedback through [GitHub Issues](https://github.com/uniquekaiser/novamira-for-mainwp/issues). Please do not direct support requests for this add-on to the Novamira or MainWP development teams.
 
 ## Requirements
 
