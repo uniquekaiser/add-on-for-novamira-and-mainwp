@@ -2,6 +2,13 @@
 
 All notable changes to Novamira for MainWP are documented here.
 
+## 0.5.1 - 2026-08-06
+
+- [FIX] Added the combined Pro installation, plugin activation, and license activation operation to the registered WordPress Ability schema so standards-compliant MCP servers can discover and invoke it.
+- [IMPROVE] Documented that all 13 fleet abilities expose labels, descriptions, JSON schemas, REST/MCP visibility metadata, and safety annotations through the standard WordPress Abilities API.
+- [IMPROVE] Clarified throughout the plugin that Novamira for MainWP is an unofficial community project and directed add-on support and feedback to GitHub Issues.
+- [DEV] Expanded contract tests to require complete discovery metadata and safety annotations for every registered fleet ability.
+
 ## 0.5.0 - 2026-08-05
 
 - [NEW] Added select-all controls and a guided installation check for child sites missing Novamira Free.

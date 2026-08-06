@@ -4,7 +4,7 @@ Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.5.0
+Stable tag: 0.5.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -14,7 +14,7 @@ Unofficial community add-on for Novamira and MainWP; not maintained by the Novam
 
 This independently owned plugin runs only on the MainWP Dashboard. It uses each site's existing authenticated MainWP Child connection for one-shot status, settings, and application-password operations; no extra companion plugin is installed on client sites. Novamira Free is not modified, bundled, or repackaged.
 
-On the Dashboard, the add-on provides fleet status, package deployment, encrypted credentials, redacted auditing, provider configurations, and the novamira-mainwp routed ability namespace. MainWP MCP Bridge (https://github.com/uniquekaiser/mainwp-mcp-bridge) keeps control of its existing exposure, policy, rate-limit, resource, prompt, and confirmation architecture. Fleet status includes an explicit live refresh timestamp, so settings changed directly in child wp-admin are read through the existing signed MainWP connection instead of being inferred from add-on policy.
+On the Dashboard, the add-on provides fleet status, package deployment, encrypted credentials, redacted auditing, provider configurations, and the novamira-mainwp routed ability namespace. All 13 fleet abilities are registered through the standard WordPress Abilities API with names, descriptions, JSON schemas, REST/MCP visibility metadata, and safety annotations, so standards-compliant WordPress MCP implementations can discover them without plugin-specific code. MainWP MCP Bridge (https://github.com/uniquekaiser/mainwp-mcp-bridge) keeps control of its existing exposure, policy, rate-limit, resource, prompt, and confirmation architecture. Fleet status includes an explicit live refresh timestamp, so settings changed directly in child wp-admin are read through the existing signed MainWP connection instead of being inferred from add-on policy.
 
 Novamira Free provides the MCP server and abilities. Pro controls remain optional: child installations can use a validated package built from the Pro copy installed on the MainWP Dashboard or an administrator-uploaded audited ZIP.
 
@@ -33,6 +33,12 @@ Official packages update from the public GitHub Releases page. Only the exact ve
 5. Create a one-time Dashboard application password on Connect and add the displayed MainWP profile to the AI client.
 
 == Changelog ==
+
+= 0.5.1 =
+* [FIX] Added the combined Pro installation, plugin activation, and license activation operation to the registered WordPress Ability schema.
+* [IMPROVE] Documented complete standard ability discovery metadata for all 13 fleet abilities.
+* [IMPROVE] Clarified the unofficial community-project status and directed add-on support to GitHub Issues.
+* [DEV] Added discovery-contract coverage for every registered fleet ability.
 
 = 0.5.0 =
 * [NEW] Added select-all controls and a guided install-and-activate check for sites missing Novamira Free.

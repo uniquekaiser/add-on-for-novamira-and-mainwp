@@ -3,7 +3,7 @@
  * Plugin Name: Novamira for MainWP
  * Plugin URI:  https://github.com/uniquekaiser/novamira-for-mainwp/
  * Description: Unofficial community add-on for managing Novamira through MainWP; not maintained by the Novamira or MainWP development teams.
- * Version:     0.5.0
+ * Version:     0.5.1
  * Requires at least: 6.9
  * Requires PHP: 7.4
  * Author:      Synergetic
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'NOVAMIRA_MAINWP_VERSION', '0.5.0' );
+define( 'NOVAMIRA_MAINWP_VERSION', '0.5.1' );
 define( 'NOVAMIRA_MAINWP_FILE', __FILE__ );
 define( 'NOVAMIRA_MAINWP_DIR', plugin_dir_path( __FILE__ ) );
 

@@ -122,7 +122,7 @@ final class GitHub_Updater {
 		} elseif ( '' !== $local_changelog ) {
 			$sections['changelog'] = $local_changelog;
 		} elseif ( empty( $sections['changelog'] ) ) {
-			$sections['changelog'] = '<h4>0.5.0</h4><ul><li><strong>[FIX]</strong> Added isolated per-site fleet processing and direct configuration exports.</li></ul>';
+			$sections['changelog'] = '<h4>0.5.1</h4><ul><li><strong>[FIX]</strong> Completed the standard WordPress Ability provisioning schema for combined Pro installation and activation.</li></ul>';
 		}
 		$info->sections = $sections;
 

@@ -35,7 +35,9 @@ Audit records contain only actor, site, operation, outcome, duration, correlatio
 
 ## MCP gateway
 
-The add-on registers the `novamira-mainwp` ability namespace. [MainWP MCP Bridge](https://github.com/uniquekaiser/mainwp-mcp-bridge) includes it in dedicated and shared-server exposure modes while preserving the bridge's policies, rate limits, resources, prompts, and confirmation tokens. The add-on routes tools, resources, and prompts to a selected child without flattening every child's catalog into the Dashboard schema.
+The add-on registers all 13 `novamira-mainwp` fleet abilities through the standard WordPress Abilities API. Every ability includes a stable versioned name, label, description, JSON input/output schemas, REST/MCP visibility metadata, and read-only/destructive/idempotent safety annotations. Any standards-compliant WordPress MCP implementation that exposes the WordPress ability registry can discover and use them without plugin-specific code or source scanning.
+
+[MainWP MCP Bridge](https://github.com/uniquekaiser/mainwp-mcp-bridge) additionally includes the namespace in dedicated and shared-server exposure modes while preserving the bridge's policies, rate limits, resources, prompts, and confirmation tokens. The add-on routes tools, resources, and prompts to a selected child without flattening every child's catalog into the Dashboard schema.
 
 The Connect screen's provider templates are maintained by this add-on and use the same configuration shapes users expect from Novamira. They do not require or modify Novamira's Connect page. It can also download a single direct-child configuration in any supported client format as an emergency backup. That export contains plaintext child application passwords, excludes sites without managed credentials, and should be stored encrypted.
 

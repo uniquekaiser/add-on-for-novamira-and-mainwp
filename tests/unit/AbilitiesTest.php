@@ -21,5 +21,27 @@ final class AbilitiesTest extends TestCase {
 		self::assertContains( 'install-free', $operations );
 		self::assertContains( 'repair-free', $operations );
 		self::assertContains( 'disable-ai', $operations );
+		self::assertContains( 'install-activate-pro', $operations );
+	}
+
+	public function test_every_ability_exposes_a_complete_standard_discovery_contract(): void {
+		Abilities::register();
+
+		foreach ( $GLOBALS['nmm_abilities'] as $ability ) {
+			self::assertNotSame( '', $ability['label'] );
+			self::assertNotSame( '', $ability['description'] );
+			self::assertSame( 'novamira-mainwp', $ability['category'] );
+			self::assertSame( 'object', $ability['input_schema']['type'] );
+			self::assertSame( 'object', $ability['output_schema']['type'] );
+			self::assertIsCallable( $ability['execute_callback'] );
+			self::assertIsCallable( $ability['permission_callback'] );
+			self::assertTrue( $ability['meta']['show_in_rest'] );
+			self::assertTrue( $ability['meta']['mcp']['public'] );
+			self::assertSame( 'tool', $ability['meta']['mcp']['type'] );
+			self::assertArrayHasKey( 'readonly', $ability['meta']['annotations'] );
+			self::assertArrayHasKey( 'destructive', $ability['meta']['annotations'] );
+			self::assertArrayHasKey( 'idempotent', $ability['meta']['annotations'] );
+			self::assertArrayHasKey( 'instructions', $ability['meta']['annotations'] );
+		}
 	}
 }
