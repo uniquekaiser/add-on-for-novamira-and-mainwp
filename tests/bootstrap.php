@@ -4,7 +4,7 @@
 declare( strict_types=1 );
 
 define( 'ABSPATH', __DIR__ . '/tmp-wordpress/' );
-define( 'NOVAMIRA_MAINWP_VERSION', '0.5.1' );
+define( 'NOVAMIRA_MAINWP_VERSION', '0.6.0' );
 define( 'NOVAMIRA_MAINWP_DIR', dirname( __DIR__ ) . '/' );
 define( 'NOVAMIRA_MAINWP_FILE', dirname( __DIR__ ) . '/mainwp-novamira-addon.php' );
 define( 'ARRAY_A', 'ARRAY_A' );
@@ -22,6 +22,7 @@ $GLOBALS['nmm_ability_rules']       = array();
 $GLOBALS['nmm_http_handler']        = null;
 $GLOBALS['nmm_http_deletes']        = array();
 $GLOBALS['nmm_scheduled']           = array();
+$GLOBALS['nmm_transients']          = array();
 
 class WP_Error {
 	private $code;
@@ -75,6 +76,8 @@ function wp_json_encode( $value, int $flags = 0 ) { return json_encode( $value, 
 function get_option( string $key, $default_value = false ) { return array_key_exists( $key, $GLOBALS['nmm_options'] ) ? $GLOBALS['nmm_options'][ $key ] : $default_value; }
 function update_option( string $key, $value, $autoload = null ): bool { $GLOBALS['nmm_options'][ $key ] = $value; return true; }
 function delete_option( string $key ): bool { unset( $GLOBALS['nmm_options'][ $key ] ); return true; }
+function get_transient( string $key ) { return $GLOBALS['nmm_transients'][ $key ] ?? false; }
+function set_transient( string $key, $value, int $expiration = 0 ): bool { $GLOBALS['nmm_transients'][ $key ] = $value; return true; }
 function add_filter( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool { $GLOBALS['nmm_filters'][ $hook ][ $priority ][] = array( $callback, $accepted_args ); return true; }
 function has_filter( string $hook ): bool { return ! empty( $GLOBALS['nmm_filters'][ $hook ] ); }
 function apply_filters( string $hook, $value, ...$args ) {
@@ -168,3 +171,4 @@ require_once dirname( __DIR__ ) . '/includes/class-runtime-access.php';
 require_once dirname( __DIR__ ) . '/includes/class-remote-mcp-client.php';
 require_once dirname( __DIR__ ) . '/includes/class-fleet-service.php';
 require_once dirname( __DIR__ ) . '/includes/class-abilities.php';
+require_once dirname( __DIR__ ) . '/includes/class-onboarding.php';

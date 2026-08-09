@@ -37,6 +37,10 @@ $crypto_roundtrip = ! is_wp_error( $encrypted )
 if ( is_string( $encrypted ) ) {
 	\Novamira\MainWP\Crypto::delete_key( $encrypted );
 }
+$sync_options          = apply_filters( 'mainwp_sync_extensions_options', array() );
+$onboarding_registered = isset( $sync_options['mainwp-novamira-addon'] )
+	&& 'novamira/novamira.php' === ( $sync_options['mainwp-novamira-addon']['plugin_slug'] ?? '' )
+	&& ! empty( $sync_options['mainwp-novamira-addon']['action_after_install'] );
 $updater_checker = \Novamira\MainWP\GitHub_Updater::get_checker();
 
 $result = array(
@@ -46,6 +50,7 @@ $result = array(
 	'novamira_fleet_ability_count' => count( $abilities ),
 	'novamira_fleet_abilities'     => $abilities,
 	'extension_registered'         => $registered,
+	'onboarding_registered'        => $onboarding_registered,
 	'crypto_roundtrip'             => $crypto_roundtrip,
 	'github_updater_initialized'   => is_object( $updater_checker ),
 	'github_updater_class'         => is_object( $updater_checker ) ? get_class( $updater_checker ) : '',
@@ -60,11 +65,12 @@ $expected_tables = array(
 sort( $expected_tables );
 sort( $tables );
 if (
-	'0.5.1' !== $result['db_version']
+	'0.6.0' !== $result['db_version']
 	|| $expected_tables !== $tables
 	|| ! in_array( 'novamira-mainwp', $result['namespaces'], true )
 	|| 13 !== $result['novamira_fleet_ability_count']
 	|| ! $registered
+	|| ! $onboarding_registered
 	|| ! $crypto_roundtrip
 	|| ! $result['github_updater_initialized']
 ) {

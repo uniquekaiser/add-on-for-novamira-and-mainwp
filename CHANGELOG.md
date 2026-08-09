@@ -1,12 +1,21 @@
 # Changelog
 
-All notable changes to Novamira for MainWP are documented here.
+All notable changes to Add-on for Novamira and MainWP are documented here.
+
+## 0.6.0 - 2026-08-08
+
+- [IMPROVE] Renamed the public project and plugin display name to Add-on for Novamira and MainWP to make its independent community status clearer while preserving upgrade-compatible internal identifiers.
+- [NEW] Added native MainWP Add Site onboarding choices to install and activate the validated upstream Novamira Free package and to create a managed credential with safe gateway defaults.
+- [SECURITY] Initial setup does not enable AI persistently, denies production access until approved, uses just-in-time access, disables read fan-out, and never provisions optional Pro automatically.
+- [COMPAT] Preserved the existing plugin directory, update asset name, options, database tables, MainWP page slug, and novamira-mainwp ability namespace for seamless upgrades.
+- [DEV] Added MainWP 6.1.5 onboarding-hook, scoped package-source, safe-policy, and credential-lifecycle contract coverage.
+- [DEV] Updated the locked code-quality tooling to a patched release after its upstream command-injection advisory.
 
 ## 0.5.1 - 2026-08-06
 
 - [FIX] Added the combined Pro installation, plugin activation, and license activation operation to the registered WordPress Ability schema so standards-compliant MCP servers can discover and invoke it.
 - [IMPROVE] Documented that all 13 fleet abilities expose labels, descriptions, JSON schemas, REST/MCP visibility metadata, and safety annotations through the standard WordPress Abilities API.
-- [IMPROVE] Clarified throughout the plugin that Novamira for MainWP is an unofficial community project and directed add-on support and feedback to GitHub Issues.
+- [IMPROVE] Clarified throughout the plugin that the add-on is an unofficial community project and directed add-on support and feedback to GitHub Issues.
 - [DEV] Expanded contract tests to require complete discovery metadata and safety annotations for every registered fleet ability.
 
 ## 0.5.0 - 2026-08-05

@@ -139,7 +139,7 @@ final class Remote_MCP_Client {
 						'protocolVersion' => self::PROTOCOL_VERSION,
 						'capabilities'    => new \stdClass(),
 						'clientInfo'      => array(
-							'name'    => 'Novamira for MainWP',
+							'name'    => 'Add-on for Novamira and MainWP',
 							'version' => NOVAMIRA_MAINWP_VERSION,
 						),
 					),

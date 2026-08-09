@@ -14,7 +14,7 @@ final class GithubUpdaterTest extends TestCase {
 	/** @return array<string, array{string}> */
 	public function accepted_assets(): array {
 		return array(
-			'current'     => array( 'mainwp-novamira-addon-0.5.1.zip' ),
+			'current'     => array( 'mainwp-novamira-addon-0.6.0.zip' ),
 			'multi-digit' => array( 'mainwp-novamira-addon-12.34.56.zip' ),
 		);
 	}
@@ -28,7 +28,8 @@ final class GithubUpdaterTest extends TestCase {
 	public function rejected_assets(): array {
 		return array(
 			'unversioned' => array( 'mainwp-novamira-addon.zip' ),
-			'source'      => array( 'novamira-for-mainwp-0.2.0.zip' ),
+			'source-old'  => array( 'novamira-for-mainwp-0.2.0.zip' ),
+			'source-new'  => array( 'add-on-for-novamira-and-mainwp-0.6.0.zip' ),
 			'prerelease'  => array( 'mainwp-novamira-addon-0.2.0-beta.1.zip' ),
 			'extra'       => array( 'mainwp-novamira-addon-0.2.0-backup.zip' ),
 			'path'        => array( 'dist/mainwp-novamira-addon-0.2.0.zip' ),

@@ -1,5 +1,5 @@
 {
-    "name": "synergetic/novamira-for-mainwp",
+    "name": "synergetic/add-on-for-novamira-and-mainwp",
     "description": "Fleet management and MCP gateway for Novamira sites managed through MainWP.",
     "type": "wordpress-plugin",
     "license": "GPL-3.0-or-later",

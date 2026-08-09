@@ -7,7 +7,24 @@ use PHPUnit\Framework\TestCase;
 
 final class PackageStorageTest extends TestCase {
 	protected function setUp(): void {
+		$GLOBALS['nmm_filters'] = array();
 		$GLOBALS['nmm_options'] = array();
+		add_filter(
+			'mainwp_encrypt_key_value',
+			static function ( $value, string $plaintext ): array {
+				return array( 'encrypted_val' => base64_encode( $plaintext ), 'file_key' => 'package-test-key' );
+			},
+			10,
+			4
+		);
+		add_filter(
+			'mainwp_decrypt_key_value',
+			static function ( $value, array $payload ): string {
+				return (string) base64_decode( (string) $payload['encrypted_val'], true );
+			},
+			10,
+			3
+		);
 	}
 
 	public function test_pro_package_source_switch_is_idempotent(): void {

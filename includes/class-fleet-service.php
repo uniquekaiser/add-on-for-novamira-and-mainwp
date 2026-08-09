@@ -116,7 +116,7 @@ final class Fleet_Service {
 			'credential-create',
 			array(
 				'username' => isset( $site->adminname ) ? (string) $site->adminname : '',
-				'label'    => 'Novamira MainWP — ' . $host,
+				'label'    => 'Add-on for Novamira and MainWP — ' . $host,
 			)
 		);
 		if ( is_wp_error( $result ) ) {

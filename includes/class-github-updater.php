@@ -12,7 +12,7 @@ namespace Novamira\MainWP;
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 final class GitHub_Updater {
-	public const REPOSITORY_URL = 'https://github.com/uniquekaiser/novamira-for-mainwp/';
+	public const REPOSITORY_URL = 'https://github.com/uniquekaiser/add-on-for-novamira-and-mainwp/';
 	public const ASSET_PATTERN  = '/^mainwp-novamira-addon-\d+\.\d+\.\d+\.zip$/i';
 
 	/** @var object|null */
@@ -66,7 +66,7 @@ final class GitHub_Updater {
 		if ( ! self::$unavailable || ! current_user_can( 'update_plugins' ) ) {
 			return;
 		}
-		echo '<div class="notice notice-warning"><p>' . esc_html__( 'Novamira for MainWP automatic updates are unavailable because the packaged GitHub updater runtime is missing or incompatible. Reinstall an official release ZIP.', 'mainwp-novamira-addon' ) . '</p></div>';
+		echo '<div class="notice notice-warning"><p>' . esc_html__( 'Add-on for Novamira and MainWP automatic updates are unavailable because the packaged GitHub updater runtime is missing or incompatible. Reinstall an official release ZIP.', 'mainwp-novamira-addon' ) . '</p></div>';
 	}
 
 	/** @return object|null */
@@ -91,14 +91,14 @@ final class GitHub_Updater {
 			return $info;
 		}
 
-		$info->name         = 'Novamira for MainWP';
+		$info->name         = 'Add-on for Novamira and MainWP';
 		$info->slug         = 'mainwp-novamira-addon';
 		$info->requires     = '6.9';
 		$info->tested       = '7.0';
 		$info->requires_php = '7.4';
 		$info->homepage     = self::REPOSITORY_URL;
 
-		$icon        = 'https://raw.githubusercontent.com/uniquekaiser/novamira-for-mainwp/main/assets/icon.svg';
+		$icon        = 'https://raw.githubusercontent.com/uniquekaiser/add-on-for-novamira-and-mainwp/main/assets/icon.svg';
 		$icons       = isset( $info->icons ) && is_array( $info->icons ) ? $info->icons : array();
 		$info->icons = array_merge(
 			array(
@@ -122,7 +122,7 @@ final class GitHub_Updater {
 		} elseif ( '' !== $local_changelog ) {
 			$sections['changelog'] = $local_changelog;
 		} elseif ( empty( $sections['changelog'] ) ) {
-			$sections['changelog'] = '<h4>0.5.1</h4><ul><li><strong>[FIX]</strong> Completed the standard WordPress Ability provisioning schema for combined Pro installation and activation.</li></ul>';
+			$sections['changelog'] = '<h4>0.6.0</h4><ul><li><strong>[NEW]</strong> Added native MainWP Add Site onboarding with validated Novamira Free installation and safe managed gateway defaults.</li></ul>';
 		}
 		$info->sections = $sections;
 
@@ -158,7 +158,7 @@ final class GitHub_Updater {
 
 	/** @param array<string, string> $icons @return array<string, string> */
 	private static function complete_icons( array $icons ): array {
-		$icon = 'https://raw.githubusercontent.com/uniquekaiser/novamira-for-mainwp/main/assets/icon.svg';
+		$icon = 'https://raw.githubusercontent.com/uniquekaiser/add-on-for-novamira-and-mainwp/main/assets/icon.svg';
 		return array_merge(
 			array(
 				'1x'  => $icon,

@@ -133,7 +133,7 @@ final class Admin {
 		do_action( 'mainwp_pageheader_extensions', NOVAMIRA_MAINWP_FILE );
 		?>
 		<div class="ui segment novamira-mainwp">
-			<h1 class="ui header"><?php esc_html_e( 'Novamira for MainWP', 'mainwp-novamira-addon' ); ?></h1>
+			<h1 class="ui header"><?php esc_html_e( 'Add-on for Novamira and MainWP', 'mainwp-novamira-addon' ); ?></h1>
 			<div class="ui labeled icon inverted menu mainwp-sub-submenu">
 				<?php
 				foreach ( array(
@@ -687,7 +687,7 @@ else :
 		$created = \WP_Application_Passwords::create_new_application_password(
 			$user_id,
 			array(
-				'name'   => 'Novamira MainWP Gateway',
+				'name'   => 'Novamira via MainWP Gateway',
 				'app_id' => wp_generate_uuid4(),
 			)
 		);

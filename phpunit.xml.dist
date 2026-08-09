@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit bootstrap="tests/bootstrap.php" colors="true">
     <testsuites>
-        <testsuite name="Novamira for MainWP">
+        <testsuite name="Add-on for Novamira and MainWP">
             <directory>tests/unit</directory>
         </testsuite>
     </testsuites>

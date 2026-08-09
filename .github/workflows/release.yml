@@ -52,5 +52,5 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             "dist/mainwp-novamira-addon-${VERSION}.zip" \
             --verify-tag \
-            --title "Novamira for MainWP ${VERSION}" \
+            --title "Add-on for Novamira and MainWP ${VERSION}" \
             --notes-file "dist/release-notes-${VERSION}.md"

@@ -27,6 +27,10 @@ final class Plugin {
 
 		add_filter( 'mainwp_getextensions', array( self::class, 'register_extension' ) );
 		add_filter( 'mainwp_getsubpages_sites', array( self::class, 'register_site_subpage' ) );
+		add_filter( 'mainwp_sync_extensions_options', array( Onboarding::class, 'sync_options' ) );
+		add_filter( 'plugins_api', array( Onboarding::class, 'plugin_information' ), 100, 3 );
+		add_filter( 'mainwp_prepare_install_download_url', array( Onboarding::class, 'prepare_download_url' ), 100, 2 );
+		add_action( 'mainwp_applypluginsettings_mainwp-novamira-addon', array( Onboarding::class, 'apply_defaults' ) );
 		add_filter( 'mainwp_mcp_bridge_ability_namespaces', array( self::class, 'ability_namespaces' ) );
 		add_action( 'wp_abilities_api_categories_init', array( Abilities::class, 'register_category' ) );
 		add_action( 'wp_abilities_api_init', array( Abilities::class, 'register' ) );
@@ -42,7 +46,7 @@ final class Plugin {
 	public static function register_extension( array $extensions ): array {
 		$extensions[] = array(
 			'plugin'           => NOVAMIRA_MAINWP_FILE,
-			'name'             => __( 'Novamira for MainWP', 'mainwp-novamira-addon' ),
+			'name'             => __( 'Add-on for Novamira and MainWP', 'mainwp-novamira-addon' ),
 			'callback'         => array( Admin::class, 'render' ),
 			'on_load_callback' => array( Admin::class, 'on_load' ),
 		);
@@ -71,6 +75,6 @@ final class Plugin {
 		if ( ! current_user_can( 'manage_options' ) || MainWP_Client::ready() ) {
 			return;
 		}
-		echo '<div class="notice notice-error"><p><strong>' . esc_html__( 'Novamira for MainWP is inactive:', 'mainwp-novamira-addon' ) . '</strong> ' . esc_html__( 'MainWP Dashboard 6.0 or newer is required.', 'mainwp-novamira-addon' ) . '</p></div>';
+		echo '<div class="notice notice-error"><p><strong>' . esc_html__( 'Add-on for Novamira and MainWP is inactive:', 'mainwp-novamira-addon' ) . '</strong> ' . esc_html__( 'MainWP Dashboard 6.0 or newer is required.', 'mainwp-novamira-addon' ) . '</p></div>';
 	}
 }

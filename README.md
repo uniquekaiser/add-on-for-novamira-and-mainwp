@@ -1,14 +1,14 @@
-# Novamira for MainWP
+# Add-on for Novamira and MainWP
 
-Novamira for MainWP is an unofficial, community-maintained, Dashboard-only MainWP extension.
+Add-on for Novamira and MainWP is an unofficial, community-maintained, Dashboard-only MainWP extension.
 
-It provides fleet management, encrypted credentials, policies, package deployment, auditing, provider configurations, and the routed MCP gateway. Child operations use the authenticated connection already provided by MainWP Child; no Novamira for MainWP plugin is installed on client sites. Novamira Free remains an upstream dependency and is never patched or repackaged. Novamira Pro is optional and never gates Free fleet management or the MCP gateway.
+It provides fleet management, encrypted credentials, policies, package deployment, auditing, provider configurations, and the routed MCP gateway. Child operations use the authenticated connection already provided by MainWP Child; no add-on companion plugin is installed on client sites. Novamira Free remains an upstream dependency and is never patched or repackaged. Novamira Pro is optional and never gates Free fleet management or the MCP gateway.
 
 This project is not an official Novamira or MainWP product. It is not affiliated with, endorsed by, or maintained by the Novamira or MainWP development teams.
 
 ## Support and feedback
 
-Report bugs, request features, and provide feedback through [GitHub Issues](https://github.com/uniquekaiser/novamira-for-mainwp/issues). Please do not direct support requests for this add-on to the Novamira or MainWP development teams.
+Report bugs, request features, and provide feedback through [GitHub Issues](https://github.com/uniquekaiser/add-on-for-novamira-and-mainwp/issues). Please do not direct support requests for this add-on to the Novamira or MainWP development teams.
 
 ## Requirements
 
@@ -24,6 +24,12 @@ Report bugs, request features, and provide feedback through [GitHub Issues](http
 2. Use Fleet to install or activate upstream Novamira Free on selected MainWP sites. The add-on validates the HTTPS metadata and package before MainWP deploys it.
 3. Optionally upload an audited Novamira Pro ZIP on Packages.
 4. Approve production access per site, create managed child credentials, and create the one-time Dashboard MCP profile.
+
+## New-site onboarding
+
+On MainWP Dashboard 6.0 or newer, the Single Site Add Site form includes this add-on in **Add-ons Settings Synchronization**. Administrators can select **Install Novamira Free plugin** and, independently, **Create a managed credential and apply safe gateway defaults**. The installer uses the same HTTPS release-metadata and ZIP validation as Fleet; it never falls back to an unrelated WordPress.org package.
+
+The setup option requires Novamira Free to be active, creates a managed application password only when one does not already exist, enables the gateway policy, keeps persistent AI enablement unchanged, uses just-in-time access, denies production access until explicitly approved, disables read fan-out, refreshes live status, and records redacted audit events. Optional Pro is never installed during onboarding. MainWP does not render its synchronization block for Multiple Sites or CSV imports, so those flows continue to use Fleet bulk provisioning.
 
 ## Security model
 

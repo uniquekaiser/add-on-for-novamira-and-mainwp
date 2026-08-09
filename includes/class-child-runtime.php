@@ -128,7 +128,7 @@ try {
 	} elseif ( 'credential-create' === $__nmm_action ) {
 		$connected = sanitize_user( (string) get_option( 'mainwp_child_connected_admin', '' ) );
 		$requested = isset( $__nmm_params['username'] ) ? sanitize_user( (string) $__nmm_params['username'] ) : '';
-		$label     = isset( $__nmm_params['label'] ) ? sanitize_text_field( (string) $__nmm_params['label'] ) : 'Novamira MainWP';
+		$label     = isset( $__nmm_params['label'] ) ? sanitize_text_field( (string) $__nmm_params['label'] ) : 'Add-on for Novamira and MainWP';
 		$user      = get_user_by( 'login', $connected );
 		if ( '' === $connected || ( '' !== $requested && ! hash_equals( $connected, $requested ) ) ) {
 			$__nmm_reply( false, array(), 'connected_user_mismatch', 'Credentials may be created only for the MainWP-connected administrator.' );

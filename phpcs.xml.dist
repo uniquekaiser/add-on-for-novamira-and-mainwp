@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<ruleset name="Novamira for MainWP">
+<ruleset name="Add-on for Novamira and MainWP">
     <description>WordPress and PHP 7.4 compatibility checks.</description>
     <file>mainwp-novamira-addon.php</file>
     <file>includes</file>
