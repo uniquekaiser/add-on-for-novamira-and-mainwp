@@ -2,6 +2,14 @@
 
 All notable changes to Add-on for Novamira and MainWP are documented here.
 
+## 0.7.0 - 2026-08-27
+
+- [NEW] Added a fleet action that activates the stored Novamira Pro license without installing or activating the Pro plugin.
+- [COMPAT] Verified WordPress 7.1 compatibility and added its standard public ability-discovery flag while preserving REST and MCP metadata.
+- [IMPROVE] Added exact WordPress 7.1 compatibility metadata to fresh and cached dashboard update rows.
+- [SECURITY] Prevented Git development checkouts from initializing the packaged public GitHub updater.
+- [DEV] Added license-only isolation, ability-schema, discovery, UI, and updater-metadata regression coverage.
+
 ## 0.6.0 - 2026-08-08
 
 - [IMPROVE] Renamed the public project and plugin display name to Add-on for Novamira and MainWP to make its independent community status clearer while preserving upgrade-compatible internal identifiers.

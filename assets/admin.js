@@ -109,6 +109,15 @@
 
 	$(function () {
 		var bulkIntent = null;
+		var $bulkOperation = $('#nmm-bulk-operation');
+		if (!$bulkOperation.find('option[value="activate-pro-license"]').length) {
+			$bulkOperation.find('option[value="update-pro"]').before(
+				$('<option>', {
+					value: 'activate-pro-license',
+					text: 'Activate stored Pro license only (plugin must be active)'
+				})
+			);
+		}
 		var $fleetSelectAll = $('#nmm-select-all');
 		var $fleetCheckboxes = $('.nmm-site-checkbox');
 		$fleetSelectAll.on('change', function () {

@@ -22,6 +22,7 @@ final class AbilitiesTest extends TestCase {
 		self::assertContains( 'repair-free', $operations );
 		self::assertContains( 'disable-ai', $operations );
 		self::assertContains( 'install-activate-pro', $operations );
+		self::assertContains( 'activate-pro-license', $operations );
 	}
 
 	public function test_every_ability_exposes_a_complete_standard_discovery_contract(): void {
@@ -35,6 +36,7 @@ final class AbilitiesTest extends TestCase {
 			self::assertSame( 'object', $ability['output_schema']['type'] );
 			self::assertIsCallable( $ability['execute_callback'] );
 			self::assertIsCallable( $ability['permission_callback'] );
+			self::assertTrue( $ability['meta']['public'] );
 			self::assertTrue( $ability['meta']['show_in_rest'] );
 			self::assertTrue( $ability['meta']['mcp']['public'] );
 			self::assertSame( 'tool', $ability['meta']['mcp']['type'] );

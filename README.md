@@ -43,13 +43,15 @@ Audit records contain only actor, site, operation, outcome, duration, correlatio
 
 The add-on registers all 13 `novamira-mainwp` fleet abilities through the standard WordPress Abilities API. Every ability includes a stable versioned name, label, description, JSON input/output schemas, REST/MCP visibility metadata, and read-only/destructive/idempotent safety annotations. Any standards-compliant WordPress MCP implementation that exposes the WordPress ability registry can discover and use them without plugin-specific code or source scanning.
 
+The release is tested through WordPress 7.1 and declares the standard WordPress 7.1 public exposure flag in addition to the existing REST and MCP-specific metadata.
+
 [MainWP MCP Bridge](https://github.com/uniquekaiser/mainwp-mcp-bridge) additionally includes the namespace in dedicated and shared-server exposure modes while preserving the bridge's policies, rate limits, resources, prompts, and confirmation tokens. The add-on routes tools, resources, and prompts to a selected child without flattening every child's catalog into the Dashboard schema.
 
 The Connect screen's provider templates are maintained by this add-on and use the same configuration shapes users expect from Novamira. They do not require or modify Novamira's Connect page. It can also download a single direct-child configuration in any supported client format as an emergency backup. That export contains plaintext child application passwords, excludes sites without managed credentials, and should be stored encrypted.
 
 ## Pro behavior
 
-Pro is optional. Administrators may build the child package from the Novamira Pro copy installed on the MainWP Dashboard or upload a release ZIP that passes root, path, plugin-header, and version checks, then configure an encrypted default license or per-site override. The combined fleet action installs the package, activates the WordPress plugin, and activates that stored license independently for each selected site. Missing, invalid, expired, or unreachable Pro licensing does not disable or change Novamira Free.
+Pro is optional. Administrators may build the child package from the Novamira Pro copy installed on the MainWP Dashboard or upload a release ZIP that passes root, path, plugin-header, and version checks, then configure an encrypted default license or per-site override. The combined fleet action installs the package, activates the WordPress plugin, and activates that stored license independently for each selected site. A separate license-only fleet action reactivates the stored license without installing or activating the Pro plugin; it reports an isolated site failure when Pro is unavailable or inactive. Missing, invalid, expired, or unreachable Pro licensing does not disable or change Novamira Free.
 
 ## Distribution build
 

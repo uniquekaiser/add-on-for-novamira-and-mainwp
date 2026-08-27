@@ -88,4 +88,20 @@ final class BulkProvisioningTest extends TestCase {
 		$license = array_filter( $GLOBALS['nmm_child_payloads'], static function ( array $payload ): bool { return 'pro-license' === ( $payload['action'] ?? '' ); } );
 		self::assertCount( 0, $license );
 	}
+
+	public function test_activate_pro_license_only_skips_plugin_and_package_operations(): void {
+		$result = Fleet_Service::provision( array( 71 ), 'activate-pro-license', false );
+		self::assertTrue( $result['results'][0]['ok'] );
+		$plugin_requests = array_filter(
+			$GLOBALS['nmm_bulk_requests'],
+			static function ( array $request ): bool {
+				return 'code_snippet' !== $request['what'];
+			}
+		);
+		self::assertCount( 0, $plugin_requests );
+		$license = array_values( array_filter( $GLOBALS['nmm_child_payloads'], static function ( array $payload ): bool { return 'pro-license' === ( $payload['action'] ?? '' ); } ) );
+		self::assertCount( 1, $license );
+		self::assertSame( 'activate', $license[0]['params']['operation'] );
+		self::assertSame( 'license-123', $license[0]['params']['license_key'] );
+	}
 }

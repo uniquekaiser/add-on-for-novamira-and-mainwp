@@ -812,6 +812,7 @@ else :
 			'install-pro'          => 'Novamira Pro installation',
 			'install-activate-pro' => 'Novamira Pro installation, plugin activation, and license activation',
 			'activate-pro'         => 'Novamira Pro plugin and license activation',
+			'activate-pro-license' => 'Novamira Pro license activation only',
 			'update-pro'           => 'Novamira Pro update',
 		);
 		return $labels[ $operation ] ?? 'Operation';

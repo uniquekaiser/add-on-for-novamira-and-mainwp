@@ -11,6 +11,8 @@ final class AdminUiContractTest extends TestCase {
 		self::assertStringContainsString( 'id="nmm-select-all"', $admin );
 		self::assertStringContainsString( 'id="nmm-install-check-modal"', $admin );
 		self::assertStringContainsString( 'install-activate-pro', $admin );
+		self::assertStringContainsString( 'activate-pro-license', $admin . $js );
+		self::assertStringContainsString( 'Activate stored Pro license only (plugin must be active)', $admin . $js );
 		self::assertStringContainsString( 'novamira_mainwp_bulk_site', $js );
 		self::assertStringContainsString( 'Other sites will continue', $admin . $js );
 		self::assertStringContainsString( 'maxWorkers', $js );

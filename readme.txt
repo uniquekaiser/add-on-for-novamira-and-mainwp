@@ -2,9 +2,9 @@
 Contributors: synergetic
 Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.6.0
+Stable tag: 0.7.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -37,6 +37,13 @@ The MainWP Single Site Add Site form includes two native Add-ons Settings Synchr
 5. Create a one-time Dashboard application password on Connect and add the displayed MainWP profile to the AI client.
 
 == Changelog ==
+
+= 0.7.0 =
+* [NEW] Added a fleet action that activates the stored Novamira Pro license without installing or activating the Pro plugin.
+* [COMPAT] Verified WordPress 7.1 compatibility and added its standard public ability-discovery flag while preserving REST and MCP metadata.
+* [IMPROVE] Added exact WordPress 7.1 compatibility metadata to fresh and cached dashboard update rows.
+* [SECURITY] Prevented Git development checkouts from initializing the packaged public GitHub updater.
+* [DEV] Added license-only isolation, ability-schema, discovery, UI, and updater-metadata regression coverage.
 
 = 0.6.0 =
 * [IMPROVE] Renamed the public project and plugin display name to Add-on for Novamira and MainWP.

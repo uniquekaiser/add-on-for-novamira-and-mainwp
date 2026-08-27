@@ -225,7 +225,7 @@ final class Fleet_Service {
 	 * @return array<string, mixed>
 	 */
 	public static function provision( array $site_ids, string $operation, bool $dry_run ): array {
-		$allowed = array( 'refresh-status', 'repair-free', 'install-free', 'activate-free', 'update-free', 'enable-ai', 'disable-ai', 'install-pro', 'install-activate-pro', 'activate-pro', 'update-pro' );
+		$allowed = array( 'refresh-status', 'repair-free', 'install-free', 'activate-free', 'update-free', 'enable-ai', 'disable-ai', 'install-pro', 'install-activate-pro', 'activate-pro', 'activate-pro-license', 'update-pro' );
 		if ( ! in_array( $operation, $allowed, true ) ) {
 			return array( 'error' => 'Unsupported provisioning operation.' );
 		}
@@ -435,6 +435,9 @@ final class Fleet_Service {
 		}
 		if ( 'update-free' === $operation ) {
 			return MainWP_Client::update_plugin( $site_id, self::FREE_PLUGIN );
+		}
+		if ( 'activate-pro-license' === $operation ) {
+			return self::manage_pro_license( $site_id, 'activate' );
 		}
 		if ( 'activate-pro' === $operation ) {
 			$activated = MainWP_Client::activate_plugin( $site_id, self::PRO_PLUGIN );

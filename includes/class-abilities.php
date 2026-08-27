@@ -29,7 +29,7 @@ final class Abilities {
 
 		self::ability( 'list-sites-v1', 'List Novamira sites', 'List the managed MainWP fleet and cached Novamira status.', self::list_schema(), array( self::class, 'list_sites' ), true );
 		self::ability( 'get-site-v1', 'Get Novamira site', 'Get one managed site and optionally refresh its Novamira status.', self::site_schema( true ), array( self::class, 'get_site' ), true );
-		self::ability( 'provision-sites-v1', 'Provision Novamira sites', 'Install, activate, update, or repair Novamira Free and optional Pro through the existing MainWP Child connection, including combined Pro plugin and license activation.', self::provision_schema(), array( self::class, 'provision' ), false, true );
+		self::ability( 'provision-sites-v1', 'Provision Novamira sites', 'Install, activate, update, or repair Novamira Free and optional Pro through the existing MainWP Child connection, including combined Pro setup and license-only reactivation.', self::provision_schema(), array( self::class, 'provision' ), false, true );
 		self::ability( 'set-site-policy-v1', 'Set Novamira site policy', 'Set production approval, gateway access, fan-out, and ability rules.', self::policy_schema(), array( self::class, 'set_policy' ), false, true );
 		self::ability( 'rotate-credential-v1', 'Rotate Novamira credential', 'Create and store a new managed child application password without returning its plaintext.', self::confirmed_site_schema(), array( self::class, 'rotate_credential' ), false, true );
 		self::ability( 'revoke-credential-v1', 'Revoke Novamira credential', 'Revoke and remove the managed child application password.', self::confirmed_site_schema(), array( self::class, 'revoke_credential' ), false, true );
@@ -190,6 +190,7 @@ final class Abilities {
 				'execute_callback'    => $callback,
 				'permission_callback' => array( self::class, 'permission' ),
 				'meta'                => array(
+					'public'       => true,
 					'show_in_rest' => true,
 					'mcp'          => array(
 						'public' => true,
@@ -306,7 +307,7 @@ final class Abilities {
 					),
 					'operation' => array(
 						'type' => 'string',
-						'enum' => array( 'repair-free', 'install-free', 'activate-free', 'update-free', 'enable-ai', 'disable-ai', 'install-pro', 'install-activate-pro', 'activate-pro', 'update-pro' ),
+						'enum' => array( 'repair-free', 'install-free', 'activate-free', 'update-free', 'enable-ai', 'disable-ai', 'install-pro', 'install-activate-pro', 'activate-pro', 'activate-pro-license', 'update-pro' ),
 					),
 				),
 				self::confirmation_fields()

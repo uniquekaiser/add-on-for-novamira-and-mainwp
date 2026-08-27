@@ -14,6 +14,7 @@ use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 final class GitHub_Updater {
 	public const REPOSITORY_URL = 'https://github.com/uniquekaiser/add-on-for-novamira-and-mainwp/';
 	public const ASSET_PATTERN  = '/^mainwp-novamira-addon-\d+\.\d+\.\d+\.zip$/i';
+	private const DISTRIBUTION_RUNTIME = 'vendor/yahnis-elsts/plugin-update-checker/plugin-update-checker.php';
 
 	/** @var object|null */
 	private static $checker;
@@ -21,7 +22,11 @@ final class GitHub_Updater {
 	private static bool $unavailable = false;
 
 	public static function boot(): void {
-		$bootstrap = NOVAMIRA_MAINWP_DIR . 'vendor/yahnis-elsts/plugin-update-checker/plugin-update-checker.php';
+		if ( is_dir( NOVAMIRA_MAINWP_DIR . '.git' ) ) {
+			return;
+		}
+
+		$bootstrap = NOVAMIRA_MAINWP_DIR . self::DISTRIBUTION_RUNTIME;
 		if ( ! is_readable( $bootstrap ) ) {
 			self::mark_unavailable();
 			return;
@@ -53,6 +58,7 @@ final class GitHub_Updater {
 		$api->enableReleaseAssets( self::ASSET_PATTERN, 2 );
 		$checker->addFilter( 'vcs_update_detection_strategies', array( self::class, 'latest_release_only' ) );
 		$checker->addFilter( 'request_info_result', array( self::class, 'complete_metadata' ) );
+		add_filter( 'pre_set_site_transient_update_plugins', array( self::class, 'complete_update_transient' ), 100 );
 		add_filter( 'site_transient_update_plugins', array( self::class, 'complete_update_transient' ), 100 );
 		self::$checker = $checker;
 	}
@@ -94,7 +100,7 @@ final class GitHub_Updater {
 		$info->name         = 'Add-on for Novamira and MainWP';
 		$info->slug         = 'mainwp-novamira-addon';
 		$info->requires     = '6.9';
-		$info->tested       = '7.0';
+		$info->tested       = '7.1';
 		$info->requires_php = '7.4';
 		$info->homepage     = self::REPOSITORY_URL;
 
@@ -122,7 +128,7 @@ final class GitHub_Updater {
 		} elseif ( '' !== $local_changelog ) {
 			$sections['changelog'] = $local_changelog;
 		} elseif ( empty( $sections['changelog'] ) ) {
-			$sections['changelog'] = '<h4>0.6.0</h4><ul><li><strong>[NEW]</strong> Added native MainWP Add Site onboarding with validated Novamira Free installation and safe managed gateway defaults.</li></ul>';
+			$sections['changelog'] = '<h4>0.7.0</h4><ul><li><strong>[NEW]</strong> Added bulk activation for an already installed and active Novamira Pro license.</li><li><strong>[COMPAT]</strong> Verified WordPress 7.1 and adopted its standard public ability-discovery flag.</li></ul>';
 		}
 		$info->sections = $sections;
 
@@ -143,10 +149,12 @@ final class GitHub_Updater {
 			$entry = $transient->{$bucket}[ $key ];
 			if ( is_object( $entry ) ) {
 				$entry->requires     = '6.9';
+				$entry->tested       = '7.1';
 				$entry->requires_php = '7.4';
 				$entry->icons        = self::complete_icons( isset( $entry->icons ) ? (array) $entry->icons : array() );
 			} elseif ( is_array( $entry ) ) {
 				$entry['requires']     = '6.9';
+				$entry['tested']       = '7.1';
 				$entry['requires_php'] = '7.4';
 				$entry['icons']        = self::complete_icons( isset( $entry['icons'] ) ? (array) $entry['icons'] : array() );
 			}
