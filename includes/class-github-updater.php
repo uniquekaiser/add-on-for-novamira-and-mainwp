@@ -12,8 +12,8 @@ namespace Novamira\MainWP;
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 final class GitHub_Updater {
-	public const REPOSITORY_URL = 'https://github.com/uniquekaiser/add-on-for-novamira-and-mainwp/';
-	public const ASSET_PATTERN  = '/^mainwp-novamira-addon-\d+\.\d+\.\d+\.zip$/i';
+	public const REPOSITORY_URL        = 'https://github.com/uniquekaiser/add-on-for-novamira-and-mainwp/';
+	public const ASSET_PATTERN         = '/^mainwp-novamira-addon-\d+\.\d+\.\d+\.zip$/i';
 	private const DISTRIBUTION_RUNTIME = 'vendor/yahnis-elsts/plugin-update-checker/plugin-update-checker.php';
 
 	/** @var object|null */
