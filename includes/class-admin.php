@@ -91,10 +91,15 @@ final class Admin {
 				$message = is_wp_error( $password ) ? $password->get_error_message() : 'A managed credential could not be decrypted.';
 				wp_die( esc_html( $message ) );
 			}
+			$endpoint = MCP_Endpoint::resolve( (string) $site['url'], array( 'mcp' => isset( $site['mcp'] ) && is_array( $site['mcp'] ) ? $site['mcp'] : array() ) );
+			if ( is_wp_error( $endpoint ) ) {
+				wp_die( esc_html( $endpoint->get_error_message() ) );
+			}
 			$sites[] = array(
 				'id'       => (int) $site['id'],
 				'name'     => (string) $site['name'],
 				'url'      => (string) $site['url'],
+				'endpoint' => $endpoint,
 				'username' => (string) $stored['credential_username'],
 				'password' => $password,
 			);
@@ -577,7 +582,16 @@ else :
 		if ( is_array( self::$result ) && ! empty( self::$result['password'] ) && ! empty( self::$result['site_id'] ) ) {
 			$site = Fleet_Service::get_site( (int) self::$result['site_id'], false );
 			if ( ! is_wp_error( $site ) ) {
-				$url     = trailingslashit( (string) $site['url'] ) . 'wp-json/mcp/novamira';
+				$url = MCP_Endpoint::resolve(
+					(string) $site['url'],
+					array(
+						'mcp' => array( 'endpoint' => isset( self::$result['mcp_endpoint'] ) ? (string) self::$result['mcp_endpoint'] : (string) ( $site['mcp']['endpoint'] ?? '' ) ),
+					)
+				);
+				if ( is_wp_error( $url ) ) {
+					echo '<div class="ui negative message">' . esc_html( $url->get_error_message() ) . '</div>';
+					return;
+				}
 				$configs = \Novamira_Provider_Config_Registry::build( $url, (string) self::$result['username'], (string) self::$result['password'], 'novamira-' . (int) self::$result['site_id'], false, 'mainwp-novamira-addon' );
 				echo '<div class="ui warning message"><strong>' . esc_html__( 'Optional direct-site fallback â€” copy now.', 'mainwp-novamira-addon' ) . '</strong> ' . esc_html__( 'This child credential will not be shown again. The primary setup remains the single MainWP gateway on the Connect tab.', 'mainwp-novamira-addon' ) . '</div><div class="nmm-grid">';
 				foreach ( $configs as $client => $config ) {

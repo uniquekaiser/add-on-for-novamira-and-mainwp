@@ -4,7 +4,7 @@ Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.7.0
+Stable tag: 0.7.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -37,6 +37,13 @@ The MainWP Single Site Add Site form includes two native Add-ons Settings Synchr
 5. Create a one-time Dashboard application password on Connect and add the displayed MainWP profile to the AI client.
 
 == Changelog ==
+
+= 0.7.1 =
+* [FIX] Resolve child Novamira MCP endpoints from signed WordPress site data and prefer the rewrite-independent REST route.
+* [COMPAT] Verified Novamira Free 1.12.0 and bundled MCP Adapter 0.6.1 ability discovery and routing.
+* [SECURITY] Validate child-reported endpoints against the managed host, HTTPS policy, and exact Novamira MCP route.
+* [FIX] Self-heal a stale HTTP 404 endpoint once for read initialization while keeping writes non-retrying.
+* [IMPROVE] Use the rewrite-independent endpoint in provider profiles and fleet exports.
 
 = 0.7.0 =
 * [NEW] Added a fleet action that activates the stored Novamira Pro license without installing or activating the Pro plugin.

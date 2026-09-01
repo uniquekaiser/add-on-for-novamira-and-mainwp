@@ -168,11 +168,12 @@ final class Fleet_Service {
 		Audit::record( $site_id, 'rotate-credential', 'success', 0 );
 
 		$output = array(
-			'site_id'  => $site_id,
-			'username' => (string) $result['username'],
-			'uuid'     => (string) $result['uuid'],
-			'created'  => (int) $result['created'],
-			'one_time' => $include_one_time_secret,
+			'site_id'      => $site_id,
+			'username'     => (string) $result['username'],
+			'uuid'         => (string) $result['uuid'],
+			'created'      => (int) $result['created'],
+			'one_time'     => $include_one_time_secret,
+			'mcp_endpoint' => isset( $result['mcp_endpoint'] ) ? (string) $result['mcp_endpoint'] : '',
 		);
 		if ( '' !== $warning ) {
 			$output['warning'] = $warning;
@@ -615,6 +616,7 @@ final class Fleet_Service {
 			'ai'                        => $status_known && isset( $status['ai'] ) && is_array( $status['ai'] ) ? $status['ai'] : array(),
 			'available_abilities'       => $status['available_abilities'] ?? array(),
 			'available_abilities_known' => $status['available_abilities_known'] ?? false,
+			'mcp'                       => isset( $status['mcp'] ) && is_array( $status['mcp'] ) ? $status['mcp'] : array(),
 			'status_known'              => $status_known,
 			'policy'                    => Storage::policy( (int) $site->id ),
 			'last_success'              => $stored['last_success'],

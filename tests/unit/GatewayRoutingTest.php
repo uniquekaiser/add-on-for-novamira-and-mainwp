@@ -16,6 +16,12 @@ final class GatewayRoutingTest extends TestCase {
 		$GLOBALS['nmm_options']     = array();
 		$GLOBALS['nmm_scheduled']   = array();
 		$GLOBALS['nmm_mcp_headers'] = array();
+		$GLOBALS['nmm_mcp_urls'] = array();
+		$GLOBALS['nmm_fail_mcp_url_once'] = '';
+		$GLOBALS['nmm_status_endpoints'] = array(
+			1 => array( 'endpoint' => 'https://one.test/wp-json/mcp/novamira', 'query_endpoint' => 'https://one.test/?rest_route=/mcp/novamira' ),
+			2 => array( 'endpoint' => 'https://two.test/wp-json/mcp/novamira', 'query_endpoint' => 'https://two.test/?rest_route=/mcp/novamira' ),
+		);
 		$GLOBALS['nmm_http_deletes'] = array();
 		$GLOBALS['wpdb']->site_records = array();
 		NMM_Test_MainWP_DB::$sites = array(
@@ -31,9 +37,13 @@ final class GatewayRoutingTest extends TestCase {
 				$payload = nmm_child_action( $params );
 				$action  = (string) ( $payload['action'] ?? '' );
 				$GLOBALS['nmm_child_calls'][] = array( 'site_id' => $site_id, 'what' => $what, 'action' => $action );
-				$data = 'ai-open' === $action
-					? array( 'changed' => true, 'restore' => array( 'missing' => 'missing-' . $site_id, 'enabled' => '0', 'domain' => 'missing-' . $site_id ) )
-					: array( 'restored' => true );
+				if ( 'ai-open' === $action ) {
+					$data = array( 'changed' => true, 'restore' => array( 'missing' => 'missing-' . $site_id, 'enabled' => '0', 'domain' => 'missing-' . $site_id ) );
+				} elseif ( 'status' === $action ) {
+					$data = array( 'mcp' => array_merge( $GLOBALS['nmm_status_endpoints'][ $site_id ], array( 'registered' => true, 'adapter_available' => true, 'dependency_error_code' => '' ) ) );
+				} else {
+					$data = array( 'restored' => true );
+				}
 				return nmm_child_response( $params, $data );
 			},
 			10,
@@ -41,14 +51,28 @@ final class GatewayRoutingTest extends TestCase {
 		);
 
 		foreach ( array( 1, 2 ) as $site_id ) {
-			Storage::update_site( $site_id, array( 'credential_username' => 'admin-' . $site_id, 'credential_secret' => Crypto::encrypt( 'password-' . $site_id ), 'credential_uuid' => 'uuid-' . $site_id ) );
+			Storage::update_site(
+				$site_id,
+				array(
+					'credential_username' => 'admin-' . $site_id,
+					'credential_secret'   => Crypto::encrypt( 'password-' . $site_id ),
+					'credential_uuid'     => 'uuid-' . $site_id,
+					'status_cache'        => array( 'mcp' => array( 'endpoint' => $GLOBALS['nmm_status_endpoints'][ $site_id ]['endpoint'] ) ),
+					'status_checked_at'   => '2026-09-02 12:00:00',
+				)
+			);
 		}
 
 		$GLOBALS['nmm_http_handler'] = static function ( string $url, array $args ): array {
 			$payload = json_decode( (string) $args['body'], true );
 			$GLOBALS['nmm_mcp_payloads'][] = $payload;
+			$GLOBALS['nmm_mcp_urls'][] = $url;
 			$method  = (string) ( $payload['method'] ?? '' );
 			$GLOBALS['nmm_mcp_headers'][]  = $args['headers'];
+			if ( 'initialize' === $method && '' !== $GLOBALS['nmm_fail_mcp_url_once'] && $url === $GLOBALS['nmm_fail_mcp_url_once'] ) {
+				$GLOBALS['nmm_fail_mcp_url_once'] = '';
+				return array( 'response' => array( 'code' => 404 ), 'headers' => array(), 'body' => '' );
+			}
 			if ( 'notifications/initialized' === $method ) {
 				return array( 'response' => array( 'code' => 202 ), 'headers' => array(), 'body' => '' );
 			}
@@ -121,5 +145,44 @@ final class GatewayRoutingTest extends TestCase {
 		self::assertSame( 'novamira_mainwp_tool_not_found', $missing->get_error_code() );
 		self::assertSame( 'novamira_mainwp_read_classification_failed', $blocked->get_error_code() );
 		self::assertSame( 'site-one-write', $write['structuredContent']['tool'] );
+	}
+
+	public function test_signed_child_endpoint_overrides_a_mainwp_subpath_alias(): void {
+		NMM_Test_MainWP_DB::$sites[1]->url = 'https://one.test/client-alias/';
+		Storage::update_site( 1, array( 'status_cache' => array(), 'status_checked_at' => null ) );
+
+		$result = Remote_MCP_Client::list_components( 1, 'tools' );
+
+		self::assertFalse( is_wp_error( $result ) );
+		self::assertSame( 'https://one.test/?rest_route=/mcp/novamira', $GLOBALS['nmm_mcp_urls'][0] );
+		self::assertContains( 'status', array_column( $GLOBALS['nmm_child_calls'], 'action' ) );
+	}
+
+	public function test_read_initialization_self_heals_one_stale_404_endpoint(): void {
+		NMM_Test_MainWP_DB::$sites[1]->url = 'https://one.test/client-alias/';
+		$stale = 'https://one.test/client-alias/wp-json/mcp/novamira';
+		Storage::update_site( 1, array( 'status_cache' => array( 'mcp' => array( 'endpoint' => $stale ) ) ) );
+		$GLOBALS['nmm_fail_mcp_url_once'] = $stale;
+
+		$result = Remote_MCP_Client::list_components( 1, 'tools' );
+
+		self::assertFalse( is_wp_error( $result ) );
+		self::assertSame( $stale, $GLOBALS['nmm_mcp_urls'][0] );
+		self::assertSame( 'https://one.test/?rest_route=/mcp/novamira', $GLOBALS['nmm_mcp_urls'][1] );
+		self::assertContains( 'status', array_column( $GLOBALS['nmm_child_calls'], 'action' ) );
+	}
+
+	public function test_write_initialization_does_not_retry_a_stale_404_endpoint(): void {
+		NMM_Test_MainWP_DB::$sites[1]->url = 'https://one.test/client-alias/';
+		$stale = 'https://one.test/client-alias/wp-json/mcp/novamira';
+		Storage::update_site( 1, array( 'status_cache' => array( 'mcp' => array( 'endpoint' => $stale ) ) ) );
+		$GLOBALS['nmm_fail_mcp_url_once'] = $stale;
+
+		$result = Remote_MCP_Client::call_tool( 1, 'site-one-write', array(), 'write' );
+
+		self::assertTrue( is_wp_error( $result ) );
+		self::assertSame( 'novamira_mainwp_mcp_http_error', $result->get_error_code() );
+		self::assertSame( array( $stale ), $GLOBALS['nmm_mcp_urls'] );
+		self::assertNotContains( 'status', array_column( $GLOBALS['nmm_child_calls'], 'action' ) );
 	}
 }

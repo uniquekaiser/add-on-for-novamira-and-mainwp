@@ -4,7 +4,7 @@
 declare( strict_types=1 );
 
 define( 'ABSPATH', __DIR__ . '/tmp-wordpress/' );
-define( 'NOVAMIRA_MAINWP_VERSION', '0.7.0' );
+define( 'NOVAMIRA_MAINWP_VERSION', '0.7.1' );
 define( 'NOVAMIRA_MAINWP_DIR', dirname( __DIR__ ) . '/' );
 define( 'NOVAMIRA_MAINWP_FILE', dirname( __DIR__ ) . '/mainwp-novamira-addon.php' );
 define( 'ARRAY_A', 'ARRAY_A' );
@@ -168,6 +168,7 @@ require_once dirname( __DIR__ ) . '/includes/class-audit.php';
 require_once dirname( __DIR__ ) . '/includes/class-child-runtime.php';
 require_once dirname( __DIR__ ) . '/includes/class-mainwp-client.php';
 require_once dirname( __DIR__ ) . '/includes/class-runtime-access.php';
+require_once dirname( __DIR__ ) . '/includes/class-mcp-endpoint.php';
 require_once dirname( __DIR__ ) . '/includes/class-remote-mcp-client.php';
 require_once dirname( __DIR__ ) . '/includes/class-fleet-service.php';
 require_once dirname( __DIR__ ) . '/includes/class-abilities.php';

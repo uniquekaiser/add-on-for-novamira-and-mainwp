@@ -2,6 +2,15 @@
 
 All notable changes to Add-on for Novamira and MainWP are documented here.
 
+## 0.7.1 - 2026-09-02
+
+- [FIX] Resolve each child site's Novamira MCP endpoint from signed WordPress site data and prefer WordPress's standard rewrite-independent REST route.
+- [COMPAT] Verified ability discovery and routed gateway assumptions against Novamira Free 1.12.0 and its bundled MCP Adapter 0.6.1.
+- [SECURITY] Accept child-reported MCP endpoints only when they remain on the managed site's host, use verified HTTPS outside local development, and target the Novamira MCP route.
+- [FIX] Refresh a stale endpoint and retry MCP session initialization once for read operations after HTTP 404; mutating operations remain non-retrying.
+- [IMPROVE] Use the rewrite-independent child endpoint in one-time provider configurations and fleet configuration exports.
+- [DEV] Added endpoint validation, MainWP alias-path, 404 self-healing, non-retrying write, export, and child-status regression coverage.
+
 ## 0.7.0 - 2026-08-27
 
 - [NEW] Added a fleet action that activates the stored Novamira Pro license without installing or activating the Pro plugin.

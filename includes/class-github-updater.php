@@ -128,7 +128,7 @@ final class GitHub_Updater {
 		} elseif ( '' !== $local_changelog ) {
 			$sections['changelog'] = $local_changelog;
 		} elseif ( empty( $sections['changelog'] ) ) {
-			$sections['changelog'] = '<h4>0.7.0</h4><ul><li><strong>[NEW]</strong> Added bulk activation for an already installed and active Novamira Pro license.</li><li><strong>[COMPAT]</strong> Verified WordPress 7.1 and adopted its standard public ability-discovery flag.</li></ul>';
+			$sections['changelog'] = '<h4>0.7.1</h4><ul><li><strong>[FIX]</strong> Discover each child site\'s Novamira MCP endpoint through its signed MainWP connection and prefer the rewrite-independent REST route.</li><li><strong>[COMPAT]</strong> Verified Novamira Free 1.12.0 and bundled MCP Adapter 0.6.1.</li></ul>';
 		}
 		$info->sections = $sections;
 

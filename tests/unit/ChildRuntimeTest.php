@@ -17,6 +17,10 @@ final class ChildRuntimeTest extends TestCase {
 		self::assertStringNotContainsString( 'save_snippet', $script );
 		self::assertStringNotContainsString( 'mainwp_child_extra_execution', $script );
 		self::assertStringContainsString( 'mainwp_child_connected_admin', $source );
+		self::assertStringContainsString( "rest_url( 'mcp/novamira' )", $source );
+		self::assertStringContainsString( "add_query_arg( 'rest_route', '/mcp/novamira', site_url( '/' ) )", $source );
+		self::assertStringContainsString( "isset( \$mcp_routes['/mcp/novamira'] )", $source );
+		self::assertStringContainsString( 'novamira_is_mcp_adapter_available', $source );
 		self::assertStringNotContainsString( 'mainwp_child_connected_admin', $script );
 		self::assertStringContainsString( 'base64_decode', $script );
 	}

@@ -6,7 +6,7 @@ use Novamira\MainWP\Config_Export;
 use PHPUnit\Framework\TestCase;
 
 final class ConfigExportTest extends TestCase {
-	/** @return array<int,array{id:int,name:string,url:string,username:string,password:string}> */
+	/** @return array<int,array{id:int,name:string,url:string,endpoint?:string,username:string,password:string}> */
 	private function sites(): array {
 		return array(
 			array(
@@ -20,6 +20,7 @@ final class ConfigExportTest extends TestCase {
 				'id'       => 77,
 				'name'     => 'Plugin Repo',
 				'url'      => 'https://synergetic-col.com/pluginrepo/',
+				'endpoint' => 'https://synergetic-col.com/pluginrepo/?rest_route=/mcp/novamira',
 				'username' => 'admin',
 				'password' => 'secret-two',
 			),
@@ -33,7 +34,8 @@ final class ConfigExportTest extends TestCase {
 		self::assertSame( 'toml', $export['extension'] );
 		self::assertStringContainsString( '[mcp_servers.novamira-herbivoreprotein-co-40]', $export['content'] );
 		self::assertStringContainsString( '[mcp_servers.novamira-synergetic-col-com-77]', $export['content'] );
-		self::assertStringContainsString( 'https://synergetic-col.com/pluginrepo/wp-json/mcp/novamira', $export['content'] );
+		self::assertStringContainsString( 'https://synergetic-col.com/pluginrepo/?rest_route=/mcp/novamira', $export['content'] );
+		self::assertStringNotContainsString( 'https://synergetic-col.com/pluginrepo/wp-json/mcp/novamira', $export['content'] );
 		self::assertStringContainsString( 'secret-two', $export['content'] );
 	}
 

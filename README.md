@@ -39,11 +39,13 @@ When Novamira is manually off, a routed operation opens a five-minute Dashboard-
 
 Audit records contain only actor, site, operation, outcome, duration, correlation ID, and argument-key names. Credentials, license keys, argument values, and remote results are never written to the audit table.
 
+The signed child status operation reports both WordPress's generated Novamira REST URL and its standard `rest_route` form. The gateway prefers the rewrite-independent form, which remains usable when a site's web-server rules return 404 for pretty REST paths. Reported endpoints are accepted only on the managed site's host, with verified HTTPS outside local development, and only for the Novamira MCP route. Read operations can refresh and retry session initialization once after a stale HTTP 404; writes are never retried automatically.
+
 ## MCP gateway
 
 The add-on registers all 13 `novamira-mainwp` fleet abilities through the standard WordPress Abilities API. Every ability includes a stable versioned name, label, description, JSON input/output schemas, REST/MCP visibility metadata, and read-only/destructive/idempotent safety annotations. Any standards-compliant WordPress MCP implementation that exposes the WordPress ability registry can discover and use them without plugin-specific code or source scanning.
 
-The release is tested through WordPress 7.1 and declares the standard WordPress 7.1 public exposure flag in addition to the existing REST and MCP-specific metadata.
+The release is tested through WordPress 7.1 and declares the standard WordPress 7.1 public exposure flag in addition to the existing REST and MCP-specific metadata. Novamira Free 1.12.0 and its bundled MCP Adapter 0.6.1 retain the `mcp/novamira` REST route; the add-on discovers the child WordPress base through the signed MainWP Child connection and uses its rewrite-independent transport URL.
 
 [MainWP MCP Bridge](https://github.com/uniquekaiser/mainwp-mcp-bridge) additionally includes the namespace in dedicated and shared-server exposure modes while preserving the bridge's policies, rate limits, resources, prompts, and confirmation tokens. The add-on routes tools, resources, and prompts to a selected child without flattening every child's catalog into the Dashboard schema.
 

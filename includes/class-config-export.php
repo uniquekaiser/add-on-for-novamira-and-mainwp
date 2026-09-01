@@ -92,7 +92,7 @@ final class Config_Export {
 	}
 
 	/**
-	 * @param array<int, array{id:int,name:string,url:string,username:string,password:string}> $sites Sites with decrypted one-time export credentials.
+	 * @param array<int, array{id:int,name:string,url:string,endpoint?:string,username:string,password:string}> $sites Sites with decrypted one-time export credentials.
 	 * @return array{content:string,extension:string,mime:string,count:int}|\WP_Error
 	 */
 	public static function build( array $sites, string $format ) {
@@ -107,8 +107,16 @@ final class Config_Export {
 		$snippets = array();
 		$merged   = array();
 		foreach ( $sites as $site ) {
-			$name    = self::server_name( $site );
-			$url     = trailingslashit( $site['url'] ) . 'wp-json/mcp/novamira';
+			$name = self::server_name( $site );
+			$url  = MCP_Endpoint::resolve(
+				$site['url'],
+				array(
+					'mcp' => array( 'endpoint' => isset( $site['endpoint'] ) ? $site['endpoint'] : '' ),
+				)
+			);
+			if ( is_wp_error( $url ) ) {
+				return $url;
+			}
 			$configs = \Novamira_Provider_Config_Registry::build( $url, $site['username'], $site['password'], $name, false, 'mainwp-novamira-addon' );
 			if ( ! isset( $configs[ $format ]['code'] ) ) {
 				return new \WP_Error( 'novamira_mainwp_export_template_missing', 'The selected provider template is unavailable.' );
@@ -141,7 +149,7 @@ final class Config_Export {
 		);
 	}
 
-	/** @param array{id:int,name:string,url:string,username:string,password:string} $site */
+	/** @param array{id:int,name:string,url:string,endpoint?:string,username:string,password:string} $site */
 	private static function server_name( array $site ): string {
 		$host = (string) wp_parse_url( $site['url'], PHP_URL_HOST );
 		$host = strtolower( (string) preg_replace( '/[^a-z0-9]+/i', '-', $host ) );

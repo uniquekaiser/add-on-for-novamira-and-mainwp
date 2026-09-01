@@ -111,18 +111,20 @@ final class Remote_MCP_Client {
 		if ( is_wp_error( $lease ) ) {
 			return $lease;
 		}
-		$token       = isset( $lease['token'] ) ? (string) $lease['token'] : '';
-		$url         = trailingslashit( (string) $site->url ) . 'wp-json/mcp/novamira';
-		$session_id  = '';
-		$host        = (string) wp_parse_url( $url, PHP_URL_HOST );
-		$environment = function_exists( 'wp_get_environment_type' ) ? wp_get_environment_type() : 'production';
-		$local_http  = 1 === preg_match( '#^http://#i', $url )
-			&& ( in_array( $host, array( 'localhost', '127.0.0.1', '::1' ), true ) || '.local' === substr( strtolower( $host ), -6 ) )
-			&& in_array( $environment, array( 'local', 'development' ), true );
-		if ( 1 !== preg_match( '#^https://#i', $url ) && ! $local_http ) {
-			Runtime_Access::release( $site_id, $token );
-			return new \WP_Error( 'novamira_mainwp_insecure_child_url', 'Remote Novamira MCP connections require verified HTTPS outside a local environment.' );
+		$token  = isset( $lease['token'] ) ? (string) $lease['token'] : '';
+		$status = is_array( $stored['status_cache'] ) ? $stored['status_cache'] : array();
+		$url    = MCP_Endpoint::resolve( (string) $site->url, $status );
+		if ( ! MCP_Endpoint::is_authoritative( $status ) ) {
+			$refreshed = Fleet_Service::refresh_status( $site_id );
+			if ( ! is_wp_error( $refreshed ) ) {
+				$url = MCP_Endpoint::resolve( (string) $site->url, $refreshed );
+			}
 		}
+		if ( is_wp_error( $url ) ) {
+			Runtime_Access::release( $site_id, $token );
+			return $url;
+		}
+		$session_id = '';
 
 		try {
 			$attempts    = $retry_initialization ? 2 : 1;
@@ -147,6 +149,16 @@ final class Remote_MCP_Client {
 				);
 				if ( ! is_wp_error( $initialized ) ) {
 					break;
+				}
+				$error_data = $initialized->get_error_data();
+				if ( 0 === $attempt && $retry_initialization && is_array( $error_data ) && 404 === (int) ( $error_data['status'] ?? 0 ) ) {
+					$refreshed = Fleet_Service::refresh_status( $site_id );
+					if ( ! is_wp_error( $refreshed ) ) {
+						$resolved = MCP_Endpoint::resolve( (string) $site->url, $refreshed );
+						if ( ! is_wp_error( $resolved ) ) {
+							$url = $resolved;
+						}
+					}
 				}
 			}
 			if ( is_wp_error( $initialized ) ) {

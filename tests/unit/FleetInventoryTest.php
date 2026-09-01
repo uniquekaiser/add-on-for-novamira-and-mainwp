@@ -79,6 +79,7 @@ final class FleetInventoryTest extends TestCase {
 					'application_passwords'     => array( 'supported' => true, 'available_for_user' => true, 'credential_healthy' => null ),
 					'available_abilities'       => array( 'novamira/site-info', 'novamira/content-read' ),
 					'available_abilities_known' => true,
+					'mcp'                       => array( 'endpoint' => 'https://existing.test/wp-json/mcp/novamira', 'query_endpoint' => 'https://existing.test/?rest_route=/mcp/novamira', 'registered' => true, 'adapter_available' => true ),
 				),
 			)
 		);
@@ -91,5 +92,7 @@ final class FleetInventoryTest extends TestCase {
 		self::assertTrue( $result['items'][0]['pro']['license_active'] );
 		self::assertTrue( $result['items'][0]['credential']['available_for_user'] );
 		self::assertCount( 2, $result['items'][0]['available_abilities'] );
+		self::assertSame( 'https://existing.test/wp-json/mcp/novamira', $result['items'][0]['mcp']['endpoint'] );
+		self::assertSame( 'https://existing.test/?rest_route=/mcp/novamira', $result['items'][0]['mcp']['query_endpoint'] );
 	}
 }

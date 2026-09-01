@@ -101,6 +101,10 @@ try {
 			sort( $abilities, SORT_STRING );
 		}
 		$rules = function_exists( 'novamira_get_ability_rules' ) ? novamira_get_ability_rules() : array();
+		$mcp_endpoint = function_exists( 'rest_url' ) ? rest_url( 'mcp/novamira' ) : '';
+		$mcp_query_endpoint = function_exists( 'site_url' ) && function_exists( 'add_query_arg' ) ? add_query_arg( 'rest_route', '/mcp/novamira', site_url( '/' ) ) : '';
+		$mcp_routes = function_exists( 'rest_get_server' ) ? rest_get_server()->get_routes() : array();
+		$mcp_error = function_exists( 'novamira_get_mcp_dependency_error' ) ? novamira_get_mcp_dependency_error() : null;
 		$pro['license_known']  = function_exists( 'Novamira\\Pro\\is_license_active' );
 		$pro['license_active'] = $pro['license_known'] && \Novamira\Pro\is_license_active();
 		$pro['license_masked'] = function_exists( 'Novamira\\Pro\\license_key_masked' ) ? \Novamira\Pro\license_key_masked() : '';
@@ -122,6 +126,13 @@ try {
 				'ability_rules'             => is_array( $rules ) ? $rules : array(),
 				'available_abilities'       => $abilities,
 				'available_abilities_known' => $__nmm_manual_enabled(),
+				'mcp'                       => array(
+					'endpoint'              => is_string( $mcp_endpoint ) ? $mcp_endpoint : '',
+					'query_endpoint'        => is_string( $mcp_query_endpoint ) ? $mcp_query_endpoint : '',
+					'registered'            => isset( $mcp_routes['/mcp/novamira'] ),
+					'adapter_available'     => function_exists( 'novamira_is_mcp_adapter_available' ) ? (bool) novamira_is_mcp_adapter_available() : null,
+					'dependency_error_code' => is_wp_error( $mcp_error ) ? (string) $mcp_error->get_error_code() : '',
+				),
 				'runtime'                   => array( 'transport' => 'mainwp-child', 'persistent_code' => false ),
 			)
 		);
@@ -141,7 +152,7 @@ try {
 			if ( is_wp_error( $created ) ) {
 				$__nmm_reply( false, array(), $created->get_error_code(), $created->get_error_message() );
 			} else {
-				$__nmm_reply( true, array( 'username' => $connected, 'password' => (string) $created[0], 'uuid' => (string) ( $created[1]['uuid'] ?? '' ), 'created' => (int) ( $created[1]['created'] ?? time() ) ) );
+				$__nmm_reply( true, array( 'username' => $connected, 'password' => (string) $created[0], 'uuid' => (string) ( $created[1]['uuid'] ?? '' ), 'created' => (int) ( $created[1]['created'] ?? time() ), 'mcp_endpoint' => function_exists( 'site_url' ) && function_exists( 'add_query_arg' ) ? add_query_arg( 'rest_route', '/mcp/novamira', site_url( '/' ) ) : '' ) );
 			}
 		}
 	} elseif ( 'credential-revoke' === $__nmm_action ) {
