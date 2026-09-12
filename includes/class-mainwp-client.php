@@ -80,6 +80,51 @@ final class MainWP_Client {
 		return Child_Runtime::decode( $response );
 	}
 
+	/**
+	 * Finish an already-authorized window when cron has no logged-in Dashboard user.
+	 *
+	 * The action and snapshot come exclusively from the locked durable journal. No
+	 * caller-supplied operation or restore data is accepted by this cleanup path.
+	 *
+	 * @return array<string,mixed>|\WP_Error
+	 */
+	public static function restore_runtime_window( int $site_id, Database_Lock $lock ) {
+		if ( ! class_exists( '\MainWP\Dashboard\MainWP_DB' ) || ! class_exists( '\MainWP\Dashboard\MainWP_Connect' ) || ! $lock->protects( 'runtime-state' ) ) {
+			return new \WP_Error( 'novamira_mainwp_restore_not_authorized', 'A locked runtime recovery journal is required.' );
+		}
+		$state = Database_Lock::read_option( 'novamira_mainwp_runtime_state', array() );
+		$entry = is_array( $state ) ? ( $state[ (string) $site_id ] ?? array() ) : array();
+		if ( ! is_array( $entry ) || ! isset( $entry['leases'] ) || array() !== $entry['leases'] || ! isset( $entry['restore'] ) || ! is_array( $entry['restore'] ) || empty( $entry['restore']['missing'] ) ) {
+			return new \WP_Error( 'novamira_mainwp_restore_not_authorized', 'Only an exhausted journaled AI window may be restored.' );
+		}
+		$site = \MainWP\Dashboard\MainWP_DB::instance()->get_website_by_id( $site_id );
+		if ( ! is_object( $site ) || (int) ( $site->id ?? 0 ) !== $site_id ) {
+			return new \WP_Error( 'novamira_mainwp_site_not_found', 'The MainWP site was not found.' );
+		}
+		try {
+			// The extension hook rechecks the logged-in user, including for cron. Use MainWP's
+			// signed transport directly, solely for this fixed journal-bound cleanup action.
+			$response = self::normalize_response(
+				\MainWP\Dashboard\MainWP_Connect::fetch_url_authed(
+					$site,
+					'code_snippet',
+					array(
+						'action' => 'run_snippet',
+						'type'   => 'R',
+						'slug'   => 'novamira-mainwp-runtime',
+						'code'   => Child_Runtime::script( 'ai-restore', array( 'restore' => $entry['restore'] ) ),
+					),
+					false,
+					false,
+					false
+				)
+			);
+		} catch ( \Throwable $error ) {
+			return new \WP_Error( 'novamira_mainwp_restore_transport_failed', 'MainWP could not restore the journaled AI window. Cleanup will retry.' );
+		}
+		return is_wp_error( $response ) ? $response : Child_Runtime::decode( $response );
+	}
+
 	/** @return array<string, mixed>|\WP_Error */
 	public static function status( int $site_id ) {
 		$stored = Storage::get_site( $site_id );
@@ -145,6 +190,11 @@ final class MainWP_Client {
 	private static function fetch( int $site_id, string $what, array $params ) {
 		$key      = md5( NOVAMIRA_MAINWP_FILE . '-SNNonceAdder' ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_md5
 		$response = apply_filters( 'mainwp_fetchurlauthed', NOVAMIRA_MAINWP_FILE, $key, $site_id, $what, $params, null );
+		return self::normalize_response( $response );
+	}
+
+	/** @return array<string,mixed>|\WP_Error */
+	private static function normalize_response( $response ) {
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}

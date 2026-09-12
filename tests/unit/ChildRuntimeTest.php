@@ -44,4 +44,43 @@ final class ChildRuntimeTest extends TestCase {
 		self::assertSame( 'production_not_approved', $failed->get_error_code() );
 		self::assertSame( 'Approval required.', $failed->get_error_message() );
 	}
+
+	public function test_snapshot_does_not_enable_ai_and_open_requires_unchanged_snapshot(): void {
+		if ( ! defined( 'NOVAMIRA_VERSION' ) ) define( 'NOVAMIRA_VERSION', 'test' );
+		$GLOBALS['nmm_options'] = array( 'novamira_ai_abilities_enabled' => '0' );
+		$snapshot = $this->execute_ai( 'ai-snapshot' );
+		self::assertSame( '0', get_option( 'novamira_ai_abilities_enabled' ) );
+		self::assertSame( $snapshot['restore']['missing'], $snapshot['restore']['domain'] );
+		$params = array( 'restore' => $snapshot['restore'], 'expires' => time() + 300, 'production_allowed' => true );
+		update_option( 'novamira_ai_abilities_enabled', 'manual-new-setting' );
+		self::assertSame( 'restore_state_changed', $this->execute_ai( 'ai-open', $params )->get_error_code() );
+		self::assertSame( 'manual-new-setting', get_option( 'novamira_ai_abilities_enabled' ) );
+	}
+
+	public function test_open_and_restore_preserve_original_missing_options(): void {
+		if ( ! defined( 'NOVAMIRA_VERSION' ) ) define( 'NOVAMIRA_VERSION', 'test' );
+		$GLOBALS['nmm_options'] = array();
+		$snapshot = $this->execute_ai( 'ai-snapshot' );
+		$opened = $this->execute_ai( 'ai-open', array( 'restore' => $snapshot['restore'], 'expires' => time() + 300, 'production_allowed' => true ) );
+		self::assertTrue( $opened['changed'] );
+		self::assertSame( '1', get_option( 'novamira_ai_abilities_enabled' ) );
+		self::assertTrue( $this->execute_ai( 'ai-restore', $snapshot )['restored'] );
+		self::assertFalse( get_option( 'novamira_ai_abilities_enabled' ) );
+		self::assertFalse( get_option( 'novamira_ai_abilities_domain' ) );
+	}
+
+	public function test_expired_open_is_rejected_without_mutation(): void {
+		if ( ! defined( 'NOVAMIRA_VERSION' ) ) define( 'NOVAMIRA_VERSION', 'test' );
+		$GLOBALS['nmm_options'] = array();
+		$snapshot = $this->execute_ai( 'ai-snapshot' );
+		$result = $this->execute_ai( 'ai-open', array( 'restore' => $snapshot['restore'], 'expires' => time() - 1, 'production_allowed' => true ) );
+		self::assertSame( 'access_window_expired', $result->get_error_code() );
+		self::assertSame( array(), $GLOBALS['nmm_options'] );
+	}
+
+	private function execute_ai( string $action, array $params = array() ) {
+		ob_start();
+		eval( Child_Runtime::script( $action, $params ) );
+		return Child_Runtime::decode( array( 'status' => 'SUCCESS', 'result' => (string) ob_get_clean() ) );
+	}
 }

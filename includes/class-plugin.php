@@ -21,7 +21,7 @@ final class Plugin {
 			add_action( 'admin_notices', array( self::class, 'dependency_notice' ) );
 			return;
 		}
-		if ( get_option( 'novamira_mainwp_db_version' ) !== NOVAMIRA_MAINWP_VERSION ) {
+		if ( get_option( 'novamira_mainwp_db_version' ) !== Storage::SCHEMA_VERSION ) {
 			Storage::install();
 		}
 
@@ -39,6 +39,10 @@ final class Plugin {
 		add_action( 'wp_ajax_novamira_mainwp_bulk_site', array( Admin::class, 'ajax_bulk_site' ) );
 		add_action( 'admin_post_novamira_mainwp_export_configs', array( Admin::class, 'download_fleet_configs' ) );
 		add_action( 'novamira_mainwp_runtime_cleanup', array( Runtime_Access::class, 'cleanup' ), 10, 2 );
+		add_action( 'novamira_mainwp_audit_cleanup', array( Audit::class, 'prune' ) );
+		if ( ! wp_next_scheduled( 'novamira_mainwp_audit_cleanup' ) ) {
+			wp_schedule_event( time(), 'hourly', 'novamira_mainwp_audit_cleanup' );
+		}
 		Runtime_Access::recover_expired();
 	}
 

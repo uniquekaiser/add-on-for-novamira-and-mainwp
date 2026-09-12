@@ -128,7 +128,7 @@ final class GitHub_Updater {
 		} elseif ( '' !== $local_changelog ) {
 			$sections['changelog'] = $local_changelog;
 		} elseif ( empty( $sections['changelog'] ) ) {
-			$sections['changelog'] = '<h4>0.7.1</h4><ul><li><strong>[FIX]</strong> Discover each child site\'s Novamira MCP endpoint through its signed MainWP connection and prefer the rewrite-independent REST route.</li><li><strong>[COMPAT]</strong> Verified Novamira Free 1.12.0 and bundled MCP Adapter 0.6.1.</li></ul>';
+			$sections['changelog'] = '<h4>0.7.2</h4><ul><li><strong>[SECURITY]</strong> Require operation-bound, five-minute, single-use confirmation tokens for destructive fleet abilities.</li><li><strong>[SECURITY]</strong> Serialize AI access leases with durable recovery and require independently pinned Free package bytes.</li></ul>';
 		}
 		$info->sections = $sections;
 

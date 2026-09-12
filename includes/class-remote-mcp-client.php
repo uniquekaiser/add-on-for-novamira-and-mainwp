@@ -281,14 +281,15 @@ final class Remote_MCP_Client {
 		if ( ! $notification ) {
 			$payload['id'] = wp_rand( 1, PHP_INT_MAX );
 		}
-		$response = wp_remote_post(
+		$response = MCP_Endpoint::request(
 			$url,
 			array(
-				'timeout'     => 30,
-				'redirection' => 0,
-				'sslverify'   => true,
-				'headers'     => $headers,
-				'body'        => wp_json_encode( $payload ),
+				'limit_response_size' => self::MAX_BODY_BYTES + 1,
+				'timeout'             => 30,
+				'redirection'         => 0,
+				'sslverify'           => true,
+				'headers'             => $headers,
+				'body'                => wp_json_encode( $payload ),
 			)
 		);
 		if ( is_wp_error( $response ) ) {
@@ -354,7 +355,7 @@ final class Remote_MCP_Client {
 		if ( '' === $session_id ) {
 			return;
 		}
-		wp_remote_request(
+		MCP_Endpoint::request(
 			$url,
 			array(
 				'method'      => 'DELETE',

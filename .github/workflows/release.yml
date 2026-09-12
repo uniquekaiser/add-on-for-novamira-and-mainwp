@@ -6,51 +6,128 @@ on:
       - 'v*.*.*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out tagged source
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: '8.2'
           tools: composer:v2
           coverage: none
-
+          extensions: mysqli, mbstring, zip
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
-
       - name: Validate source and tests
         run: |
           composer validate --strict
+          composer audit --locked
           composer test
           composer phpcs
           composer phpstan
-
-      - name: Build audited distribution
+          node tools/check-release-workflow.mjs --self-test
+      - name: Verify concurrent leases against disposable MySQL
+        shell: bash
+        env:
+          NMM_TEST_DB_HOST: 127.0.0.1
+          NMM_TEST_DB_PORT: '23319'
+          NMM_TEST_DB_USER: root
+          NMM_TEST_DB_PASSWORD: ''
+        run: |
+          set -euo pipefail
+          MYSQL_TEST_ROOT="$(mktemp -d)"
+          mysqld --no-defaults --initialize-insecure --datadir="$MYSQL_TEST_ROOT/data" --log-error="$MYSQL_TEST_ROOT/init.log"
+          mysqld --no-defaults --datadir="$MYSQL_TEST_ROOT/data" --bind-address=127.0.0.1 --port=23319 \
+            --socket="$MYSQL_TEST_ROOT/mysql.sock" --pid-file="$MYSQL_TEST_ROOT/mysql.pid" \
+            --mysqlx=0 --skip-log-bin --log-error="$MYSQL_TEST_ROOT/server.log" &
+          MYSQL_TEST_PID=$!
+          trap 'kill "$MYSQL_TEST_PID" 2>/dev/null || true; wait "$MYSQL_TEST_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if mysqladmin --no-defaults --protocol=tcp --host=127.0.0.1 --port=23319 --user=root ping --silent; then break; fi
+            sleep 1
+          done
+          php tests/integration/runtime-concurrency.php
+      - name: Build distribution and checksums
         shell: bash
         run: |
+          set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           grep -Eq "^[[:space:]]*\*[[:space:]]*Version:[[:space:]]+${VERSION}$" mainwp-novamira-addon.php
           grep -Eq "^Stable tag:[[:space:]]+${VERSION}$" readme.txt
-          # Generate release-notes from CHANGELOG.md.
+          # Generate release-notes from the tagged version section of CHANGELOG.md.
           node tools/extract-release-notes.mjs "$VERSION" "dist/release-notes-${VERSION}.md"
           node tools/build-dist.mjs
-          test -f "dist/mainwp-novamira-addon-${VERSION}.zip"
+          cd dist
+          sha256sum "mainwp-novamira-addon-${VERSION}.zip" > SHA256SUMS
+      - name: Store tested distribution
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: distribution
+          path: |
+            dist/mainwp-novamira-addon-*.zip
+            dist/release-notes-*.md
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Publish exact release asset
+  attest:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download tested distribution
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: distribution
+          path: dist
+      - name: Verify transfer checksum
+        working-directory: dist
+        run: sha256sum --check SHA256SUMS
+      - name: Attest tested package
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        with:
+          subject-path: dist/mainwp-novamira-addon-*.zip
+
+  release:
+    needs: attest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      attestations: read
+    steps:
+      - name: Download tested distribution
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: distribution
+          path: dist
+      - name: Verify provenance and publish exact asset
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
+          set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          cd dist
+          sha256sum --check SHA256SUMS
+          gh attestation verify "mainwp-novamira-addon-${VERSION}.zip" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+            --source-digest "$GITHUB_SHA" --source-ref "$GITHUB_REF" \
+            --deny-self-hosted-runners
           gh release create "$GITHUB_REF_NAME" \
-            "dist/mainwp-novamira-addon-${VERSION}.zip" \
-            --verify-tag \
-            --title "Add-on for Novamira and MainWP ${VERSION}" \
-            --notes-file "dist/release-notes-${VERSION}.md"
+            "mainwp-novamira-addon-${VERSION}.zip" SHA256SUMS \
+            --verify-tag --title "Add-on for Novamira and MainWP ${VERSION}" \
+            --notes-file "release-notes-${VERSION}.md"

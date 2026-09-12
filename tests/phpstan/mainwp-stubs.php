@@ -1,6 +1,9 @@
 <?php
 
 namespace MainWP\Dashboard {
+	class MainWP_Connect {
+		public static function fetch_url_authed( &$site, $what, $params = null, $check_constraints = false, $force = false, $retry = true, $raw = null ) {}
+	}
 	class MainWP_DB {
 		public static function instance(): self {}
 		public function get_website_by_id( int $site_id ) {}

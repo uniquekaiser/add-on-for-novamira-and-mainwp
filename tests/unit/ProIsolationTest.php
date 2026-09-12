@@ -26,7 +26,7 @@ final class ProIsolationTest extends TestCase {
 				if ( 'pro-license' === $action ) {
 					return nmm_child_response( $params, array(), false, 'invalid_pro_operation', 'Novamira Pro is unavailable.' );
 				}
-				$data = 'ai-open' === $action
+				$data = in_array( $action, array( 'ai-open', 'ai-snapshot' ), true )
 					? array( 'changed' => false, 'restore' => array( 'missing' => 'missing-14', 'enabled' => '1', 'domain' => 'free-only.test' ) )
 					: array( 'restored' => true );
 				return nmm_child_response( $params, $data );
@@ -43,7 +43,7 @@ final class ProIsolationTest extends TestCase {
 
 		self::assertSame( 'invalid_pro_operation', $pro->get_error_code() );
 		self::assertFalse( is_wp_error( $access ) );
-		self::assertSame( array( 'pro-license', 'ai-open' ), $GLOBALS['nmm_pro_actions'] );
+		self::assertSame( array( 'pro-license', 'ai-snapshot', 'ai-open' ), $GLOBALS['nmm_pro_actions'] );
 		Runtime_Access::release( 14, $access['token'] );
 	}
 }

@@ -4,12 +4,14 @@
 declare( strict_types=1 );
 
 define( 'ABSPATH', __DIR__ . '/tmp-wordpress/' );
-define( 'NOVAMIRA_MAINWP_VERSION', '0.7.1' );
+define( 'NOVAMIRA_MAINWP_VERSION', '0.7.2' );
 define( 'NOVAMIRA_MAINWP_DIR', dirname( __DIR__ ) . '/' );
 define( 'NOVAMIRA_MAINWP_FILE', dirname( __DIR__ ) . '/mainwp-novamira-addon.php' );
 define( 'ARRAY_A', 'ARRAY_A' );
 define( 'AUTH_KEY', 'unit-test-auth-key' );
 define( 'AUTH_SALT', 'unit-test-auth-salt' );
+define( 'DAY_IN_SECONDS', 86400 );
+function wp_doing_cron(): bool { return $GLOBALS['nmm_doing_cron'] ?? false; }
 
 $GLOBALS['nmm_options']             = array();
 $GLOBALS['nmm_filters']             = array();
@@ -45,7 +47,9 @@ class WP_Application_Passwords {
 	public static function delete_application_password( int $user_id, string $uuid ) { $exists = isset( self::$records[ $user_id ][ $uuid ] ); unset( self::$records[ $user_id ][ $uuid ] ); return $exists; }
 	public static function get_user_application_password( int $user_id, string $uuid ) { return self::$records[ $user_id ][ $uuid ] ?? null; }
 }
+require_once __DIR__ . '/support/database-stubs.php';
 class NMM_Test_WPDB {
+	use NMM_Test_Security_Database;
 	public $prefix = 'wp_';
 	public $last_insert = array();
 	public $site_records = array();
@@ -69,6 +73,14 @@ class NMM_Test_MainWP_Utility {
 }
 class_alias( NMM_Test_MainWP_DB::class, 'MainWP\\Dashboard\\MainWP_DB' );
 class_alias( NMM_Test_MainWP_Utility::class, 'MainWP\\Dashboard\\MainWP_System_Utility' );
+class NMM_Test_MainWP_Connect {
+	public static function fetch_url_authed( &$site, $what, $params = null, $check_constraints = false, $force = false, $retry = true, $raw = null ) {
+		$GLOBALS['nmm_direct_restore_calls'][] = array( 'site_id' => $site->id, 'what' => $what, 'params' => $params );
+		if ( is_callable( $GLOBALS['nmm_direct_restore_handler'] ?? null ) ) return $GLOBALS['nmm_direct_restore_handler']( $site, $what, $params );
+		return apply_filters( 'mainwp_fetchurlauthed', NOVAMIRA_MAINWP_FILE, '', $site->id, $what, $params, null );
+	}
+}
+class_alias( NMM_Test_MainWP_Connect::class, 'MainWP\\Dashboard\\MainWP_Connect' );
 
 function is_wp_error( $value ): bool { return $value instanceof WP_Error; }
 function __( string $text, string $domain = 'default' ): string { return $text; }
@@ -89,7 +101,7 @@ function apply_filters( string $hook, $value, ...$args ) {
 function add_action( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool { return add_filter( $hook, $callback, $priority, $accepted_args ); }
 function do_action( string $hook, ...$args ): void { $GLOBALS['nmm_actions'][] = array( $hook, $args ); }
 function wp_register_ability( string $name, array $args ): void { $GLOBALS['nmm_abilities'][ $name ] = $args; }
-function current_user_can( string $capability ): bool { return true; }
+function current_user_can( string $capability ): bool { return $GLOBALS['nmm_capabilities'][ $capability ] ?? true; }
 function esc_html__( string $text, string $domain = 'default' ): string { return $text; }
 function wp_kses( string $html, array $allowed_html ): string { return strip_tags( $html, '<h4><ul><li><strong>' ); }
 function sanitize_key( string $value ): string { return strtolower( (string) preg_replace( '/[^a-z0-9_\-]/i', '', $value ) ); }
@@ -98,7 +110,8 @@ function sanitize_textarea_field( string $value ): string { return trim( strip_t
 function sanitize_user( string $value ): string { return strtolower( (string) preg_replace( '/[^a-z0-9_.@\-]/i', '', $value ) ); }
 function wp_unslash( $value ) { return $value; }
 function current_time( string $type, bool $gmt = false ): string { return '2026-08-04 12:00:00'; }
-function get_current_user_id(): int { return 7; }
+function get_current_user_id(): int { return $GLOBALS['nmm_current_user_id'] ?? 7; }
+function wp_get_session_token(): string { return $GLOBALS['nmm_session_token'] ?? 'test-browser-session'; }
 function wp_generate_uuid4(): string { ++$GLOBALS['nmm_uuid']; return sprintf( '00000000-0000-4000-8000-%012d', $GLOBALS['nmm_uuid'] ); }
 function wp_salt( string $scheme = 'auth' ): string { return 'unit-test-salt-' . $scheme; }
 function wp_parse_url( string $url, int $component = -1 ) { return parse_url( $url, $component ); }
@@ -106,9 +119,25 @@ function home_url( string $path = '' ): string { return 'https://dashboard.test'
 function admin_url( string $path = '' ): string { return 'https://dashboard.test/wp-admin/' . ltrim( $path, '/' ); }
 function wp_normalize_path( string $path ): string { return str_replace( '\\', '/', $path ); }
 function trailingslashit( string $value ): string { return rtrim( $value, '/\\' ) . '/'; }
-function wp_get_environment_type(): string { return 'production'; }
+function wp_get_environment_type(): string { return $GLOBALS['nmm_environment'] ?? 'production'; }
 function wp_rand( int $min = 0, int $max = 0 ): int { return 42; }
 function wp_remote_post( string $url, array $args ) { return is_callable( $GLOBALS['nmm_http_handler'] ) ? $GLOBALS['nmm_http_handler']( $url, $args ) : new WP_Error( 'no_handler', 'No HTTP handler.' ); }
+function wp_safe_remote_post( string $url, array $args ) { $args['reject_unsafe_urls'] = true; return wp_remote_post( $url, $args ); }
+function wp_safe_remote_get( string $url, array $args ) { $args['reject_unsafe_urls'] = true; return wp_remote_post( $url, $args ); }
+function wp_tempnam( string $name = '' ) { return tempnam( sys_get_temp_dir(), 'nmm-' ); }
+function wp_mkdir_p( string $path ): bool { return is_dir( $path ) || mkdir( $path, 0777, true ); }
+function wp_delete_file( string $file ): void { if ( is_file( $file ) ) unlink( $file ); }
+function sanitize_file_name( string $name ): string { return preg_replace( '/[^a-zA-Z0-9._-]/', '-', $name ); }
+function WP_Filesystem(): bool {
+	$GLOBALS['wp_filesystem'] = new class { public function move( string $source, string $target, bool $overwrite = false ): bool { if ( is_file( $target ) && $overwrite ) unlink( $target ); return rename( $source, $target ); } };
+	return true;
+}
+function remove_filter( string $hook, callable $callback, int $priority = 10 ): bool {
+	foreach ( $GLOBALS['nmm_filters'][ $hook ][ $priority ] ?? array() as $key => $item ) {
+		if ( $item[0] === $callback ) { unset( $GLOBALS['nmm_filters'][ $hook ][ $priority ][ $key ] ); return true; }
+	}
+	return false;
+}
 function wp_remote_request( string $url, array $args ) { $GLOBALS['nmm_http_deletes'][] = array( $url, $args ); return array( 'response' => array( 'code' => 204 ), 'body' => '', 'headers' => array() ); }
 function wp_remote_retrieve_response_code( array $response ): int { return (int) ( $response['response']['code'] ?? 0 ); }
 function wp_remote_retrieve_body( array $response ): string { return (string) ( $response['body'] ?? '' ); }
@@ -162,8 +191,10 @@ require_once dirname( __DIR__ ) . '/includes/provider-config-registry.php';
 require_once dirname( __DIR__ ) . '/includes/class-config-export.php';
 require_once dirname( __DIR__ ) . '/includes/class-github-updater.php';
 require_once dirname( __DIR__ ) . '/includes/class-crypto.php';
+require_once dirname( __DIR__ ) . '/includes/class-database-lock.php';
 require_once dirname( __DIR__ ) . '/includes/class-storage.php';
 require_once dirname( __DIR__ ) . '/includes/class-pro-package.php';
+require_once dirname( __DIR__ ) . '/includes/class-free-package.php';
 require_once dirname( __DIR__ ) . '/includes/class-audit.php';
 require_once dirname( __DIR__ ) . '/includes/class-child-runtime.php';
 require_once dirname( __DIR__ ) . '/includes/class-mainwp-client.php';
@@ -172,4 +203,6 @@ require_once dirname( __DIR__ ) . '/includes/class-mcp-endpoint.php';
 require_once dirname( __DIR__ ) . '/includes/class-remote-mcp-client.php';
 require_once dirname( __DIR__ ) . '/includes/class-fleet-service.php';
 require_once dirname( __DIR__ ) . '/includes/class-abilities.php';
+require_once dirname( __DIR__ ) . '/includes/class-confirmation.php';
+require_once dirname( __DIR__ ) . '/includes/class-export-access.php';
 require_once dirname( __DIR__ ) . '/includes/class-onboarding.php';

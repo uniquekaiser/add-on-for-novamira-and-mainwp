@@ -4,7 +4,7 @@ Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.7.1
+Stable tag: 0.7.2
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -31,12 +31,28 @@ The MainWP Single Site Add Site form includes two native Add-ons Settings Synchr
 == Installation ==
 
 1. Install MainWP Dashboard, MainWP MCP Bridge (https://github.com/uniquekaiser/mainwp-mcp-bridge), and Add-on for Novamira and MainWP on the Dashboard.
-2. Use Fleet to install or activate validated upstream Novamira Free on selected child sites.
+2. Configure an independently trusted Free version, SHA-256, and exact package URL, then use Fleet to install or activate it. See SECURITY-REMEDIATION.md; missing trust configuration blocks deployment.
 3. Optionally use the Novamira Pro copy installed on the Dashboard or upload an audited Pro ZIP on Packages.
 4. Approve each production site's policy and create its managed credential.
 5. Create a one-time Dashboard application password on Connect and add the displayed MainWP profile to the AI client.
 
+== Security remediation configuration ==
+
+Version 0.7.2 includes the security controls described here. Destructive MCP calls require administrator access, site authorization, and a five-minute single-use token plus user_confirmed=true. The adapter must collect human approval for the exact operation.
+
+Free package deployment requires an independently authenticated version/hash/URL pin. Plaintext credential export is disabled by default and requires explicit site selection and recent-authentication integration. Child endpoints must match the managed origin; exceptions require administrator-owned configuration. See SECURITY-REMEDIATION.md for required configuration and verification boundaries.
+
 == Changelog ==
+
+= 0.7.2 =
+* [SECURITY] Require administrator access, per-site authorization, and operation-bound five-minute single-use confirmation tokens for destructive MCP abilities.
+* [SECURITY] Serialize AI lease state under a database connection lock and persist recovery snapshots before opening access.
+* [SECURITY] Require independently pinned Free package hashes and exact URLs, install verified staged bytes, and reject redirects.
+* [SECURITY] Enforce exact child origins and disable plaintext credential exports unless explicitly enabled with recent authentication.
+* [SECURITY] Pin release actions by full commit SHA, isolate release permissions, and verify checksums and GitHub provenance before publishing.
+* [FIX] Persist and verify replacement default licenses before deleting old encryption keys.
+* [IMPROVE] Add bounded audit retention, safe error codes, request origin, and redacted forwarding support.
+* [DEV] Add negative authorization, confirmation, package, endpoint, export, recovery, and multi-process lease coverage.
 
 = 0.7.1 =
 * [FIX] Resolve child Novamira MCP endpoints from signed WordPress site data and prefer the rewrite-independent REST route.

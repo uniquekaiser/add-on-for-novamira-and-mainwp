@@ -10,7 +10,6 @@ declare( strict_types=1 );
 namespace Novamira\MainWP;
 
 final class Fleet_Service {
-	private const FREE_INFO_URL    = 'https://license.dynamic.ooo/api/novamira/info';
 	private const MIN_FREE_VERSION = '1.11.1';
 	private const FREE_PLUGIN      = 'novamira/novamira.php';
 	private const PRO_PLUGIN       = 'novamira-pro/novamira-pro.php';
@@ -56,7 +55,7 @@ final class Fleet_Service {
 		$started = microtime( true );
 		$status  = MainWP_Client::status( $site_id );
 		if ( is_wp_error( $status ) ) {
-			Audit::record( $site_id, 'status', 'error', self::duration( $started ) );
+			Audit::record( $site_id, 'status', 'error', self::duration( $started ), array(), '', (string) $status->get_error_code() );
 			return $status;
 		}
 		Storage::update_site(
@@ -120,7 +119,7 @@ final class Fleet_Service {
 			)
 		);
 		if ( is_wp_error( $result ) ) {
-			Audit::record( $site_id, 'rotate-credential', 'error', 0 );
+			Audit::record( $site_id, 'rotate-credential', 'error', 0, array(), '', (string) $result->get_error_code() );
 			return $result;
 		}
 		$password  = isset( $result['password'] ) ? (string) $result['password'] : '';
@@ -162,7 +161,7 @@ final class Fleet_Service {
 			);
 			if ( is_wp_error( $revoked ) ) {
 				$warning = 'The new credential is active, but the previous application password could not be revoked automatically.';
-				Audit::record( $site_id, 'rotate-credential-old-revoke', 'error', 0 );
+				Audit::record( $site_id, 'rotate-credential-old-revoke', 'error', 0, array(), '', (string) $revoked->get_error_code() );
 			}
 		}
 		Audit::record( $site_id, 'rotate-credential', 'success', 0 );
@@ -280,7 +279,7 @@ final class Fleet_Service {
 					'ok'      => true,
 					'result'  => $result,
 				);
-			Audit::record( $site_id, 'provision-' . $operation, is_wp_error( $result ) ? 'error' : 'success', self::duration( $started ) );
+			Audit::record( $site_id, 'provision-' . $operation, is_wp_error( $result ) ? 'error' : 'success', self::duration( $started ), array(), '', is_wp_error( $result ) ? (string) $result->get_error_code() : '' );
 		}
 		return array(
 			'operation' => $operation,
@@ -307,7 +306,9 @@ final class Fleet_Service {
 				'type'   => $type,
 				'search' => $search,
 				'cursor' => $cursor,
-			)
+			),
+			'',
+			is_wp_error( $result ) ? (string) $result->get_error_code() : ''
 		);
 		if ( is_wp_error( $result ) || '' === $search ) {
 			return $result;
@@ -336,7 +337,7 @@ final class Fleet_Service {
 		}
 		$started = microtime( true );
 		$result  = Remote_MCP_Client::read_resource( $site_id, $uri );
-		Audit::record( $site_id, 'mcp-read-resource', is_wp_error( $result ) ? 'error' : 'success', self::duration( $started ), array( 'uri' => $uri ) );
+		Audit::record( $site_id, 'mcp-read-resource', is_wp_error( $result ) ? 'error' : 'success', self::duration( $started ), array( 'uri' => $uri ), '', is_wp_error( $result ) ? (string) $result->get_error_code() : '' );
 		return $result;
 	}
 
@@ -356,7 +357,9 @@ final class Fleet_Service {
 			array(
 				'name'      => $name,
 				'arguments' => $arguments,
-			)
+			),
+			'',
+			is_wp_error( $result ) ? (string) $result->get_error_code() : ''
 		);
 		return $result;
 	}
@@ -373,7 +376,7 @@ final class Fleet_Service {
 		}
 		$started = microtime( true );
 		$result  = Remote_MCP_Client::call_tool( $site_id, $tool_name, $arguments, $mode );
-		Audit::record( $site_id, 'mcp-' . $mode . '-' . sanitize_key( $tool_name ), is_wp_error( $result ) ? 'error' : 'success', self::duration( $started ), $arguments );
+		Audit::record( $site_id, 'mcp-' . $mode . '-' . sanitize_key( $tool_name ), is_wp_error( $result ) ? 'error' : 'success', self::duration( $started ), $arguments, '', is_wp_error( $result ) ? (string) $result->get_error_code() : '' );
 		if ( ! is_wp_error( $result ) ) {
 			Storage::update_site( $site_id, array( 'last_success' => current_time( 'mysql', true ) ) );
 		}
@@ -410,7 +413,7 @@ final class Fleet_Service {
 				'license_key' => $license_key,
 			)
 		);
-		Audit::record( $site_id, 'pro-license-' . $operation, is_wp_error( $result ) ? 'error' : 'success', 0, array( 'operation' => $operation ) );
+		Audit::record( $site_id, 'pro-license-' . $operation, is_wp_error( $result ) ? 'error' : 'success', 0, array( 'operation' => $operation ), '', is_wp_error( $result ) ? (string) $result->get_error_code() : '' );
 		return $result;
 	}
 
@@ -435,7 +438,15 @@ final class Fleet_Service {
 			return MainWP_Client::activate_plugin( $site_id, self::FREE_PLUGIN );
 		}
 		if ( 'update-free' === $operation ) {
-			return MainWP_Client::update_plugin( $site_id, self::FREE_PLUGIN );
+			$status = MainWP_Client::status( $site_id );
+			if ( is_wp_error( $status ) ) {
+				return $status;
+			}
+			if ( ! isset( $status['free'] ) || ! is_array( $status['free'] ) || ! isset( $status['free']['active'] ) || ! is_bool( $status['free']['active'] ) ) {
+				return new \WP_Error( 'novamira_mainwp_free_activation_unknown', 'The live Novamira Free activation state could not be verified before updating.' );
+			}
+			$release = self::free_release();
+			return is_wp_error( $release ) ? $release : MainWP_Client::install_plugin( $site_id, (string) $release['download_url'], $status['free']['active'], true );
 		}
 		if ( 'activate-pro-license' === $operation ) {
 			return self::manage_pro_license( $site_id, 'activate' );
@@ -477,113 +488,7 @@ final class Fleet_Service {
 
 	/** @return array<string, mixed>|\WP_Error */
 	private static function free_release() {
-		$cached = get_transient( 'novamira_mainwp_free_release' );
-		if ( is_array( $cached ) ) {
-			return $cached;
-		}
-		$response = wp_remote_get(
-			self::FREE_INFO_URL,
-			array(
-				'timeout'     => 15,
-				'redirection' => 2,
-				'sslverify'   => true,
-			)
-		);
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-		$data = json_decode( wp_remote_retrieve_body( $response ), true );
-		if ( wp_remote_retrieve_response_code( $response ) !== 200 || ! is_array( $data ) ) {
-			return new \WP_Error( 'novamira_mainwp_free_release_invalid', 'The Novamira release service returned an invalid response.' );
-		}
-		$url     = isset( $data['download_url'] ) && is_string( $data['download_url'] ) ? $data['download_url'] : '';
-		$version = isset( $data['version'] ) && is_string( $data['version'] ) ? $data['version'] : '';
-		$slug    = isset( $data['slug'] ) && is_string( $data['slug'] ) ? $data['slug'] : '';
-		if ( 'novamira' !== $slug || 1 !== preg_match( '#^https://#i', $url ) || 1 !== preg_match( '/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/', $version ) ) {
-			return new \WP_Error( 'novamira_mainwp_free_release_unsafe', 'The Novamira release metadata failed URL or version validation.' );
-		}
-		if ( version_compare( $version, self::MIN_FREE_VERSION, '<' ) ) {
-			return new \WP_Error( 'novamira_mainwp_free_too_old', 'The upstream Novamira Free release is older than the supported baseline.' );
-		}
-		$inspection = self::inspect_free_package( $url, $version );
-		if ( is_wp_error( $inspection ) ) {
-			return $inspection;
-		}
-		$release = array(
-			'version'      => $version,
-			'download_url' => $url,
-			'sha256'       => $inspection['sha256'],
-		);
-		set_transient( 'novamira_mainwp_free_release', $release, 3600 );
-		return $release;
-	}
-
-	/** @return array{sha256:string}|\WP_Error */
-	private static function inspect_free_package( string $url, string $expected_version ) {
-		if ( ! class_exists( 'ZipArchive' ) ) {
-			return new \WP_Error( 'novamira_mainwp_zip_unavailable', 'ZipArchive is required to validate Novamira Free packages.' );
-		}
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-		$temporary = wp_tempnam( 'novamira-free.zip' );
-		if ( ! is_string( $temporary ) || '' === $temporary ) {
-			return new \WP_Error( 'novamira_mainwp_temp_file_failed', 'Could not create a temporary package file.' );
-		}
-
-		$response = wp_safe_remote_get(
-			$url,
-			array(
-				'timeout'             => 30,
-				'redirection'         => 2,
-				'sslverify'           => true,
-				'stream'              => true,
-				'filename'            => $temporary,
-				'limit_response_size' => 52428800,
-			)
-		);
-		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
-			wp_delete_file( $temporary );
-			return is_wp_error( $response ) ? $response : new \WP_Error( 'novamira_mainwp_free_download_failed', 'The Novamira Free package could not be downloaded safely.' );
-		}
-
-		$zip = new \ZipArchive();
-		if ( true !== $zip->open( $temporary ) ) {
-			wp_delete_file( $temporary );
-			return new \WP_Error( 'novamira_mainwp_free_zip_invalid', 'The Novamira Free package is not a readable ZIP.' );
-		}
-		if ( $zip->numFiles > 5000 ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-			$zip->close();
-			wp_delete_file( $temporary );
-			return new \WP_Error( 'novamira_mainwp_free_zip_too_many_files', 'The Novamira Free package contains too many files.' );
-		}
-
-		$main              = '';
-		$uncompressed_size = 0;
-		for ( $index = 0; $index < $zip->numFiles; ++$index ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-			$name               = (string) $zip->getNameIndex( $index );
-			$stat               = $zip->statIndex( $index );
-			$uncompressed_size += is_array( $stat ) ? (int) ( $stat['size'] ?? 0 ) : 0;
-			$attributes         = 0;
-			$operations         = 0;
-			$is_symlink         = $zip->getExternalAttributesIndex( $index, $operations, $attributes ) && 0120000 === ( ( $attributes >> 16 ) & 0170000 );
-			if ( $uncompressed_size > 209715200 || $is_symlink || false !== strpos( $name, "\0" ) || false !== strpos( $name, '\\' ) || false !== strpos( $name, '../' ) || 0 === strpos( $name, '/' ) || 0 !== strpos( $name, 'novamira/' ) ) {
-				$zip->close();
-				wp_delete_file( $temporary );
-				return new \WP_Error( 'novamira_mainwp_free_zip_unsafe', 'The Novamira Free package contains an unsafe path or invalid root directory.' );
-			}
-			if ( 'novamira/novamira.php' === $name ) {
-				$main = (string) $zip->getFromIndex( $index );
-			}
-		}
-		$zip->close();
-
-		$plugin_name = preg_match( '/^[ \t\/*#@]*Plugin Name:\s*([^\r\n]+)/mi', $main, $name_match ) ? trim( $name_match[1] ) : '';
-		$version     = preg_match( '/^[ \t\/*#@]*Version:\s*([^\r\n]+)/mi', $main, $version_match ) ? trim( $version_match[1] ) : '';
-		$hash        = hash_file( 'sha256', $temporary );
-		wp_delete_file( $temporary );
-		if ( '' === $main || false === stripos( $plugin_name, 'Novamira' ) || $expected_version !== $version || ! is_string( $hash ) ) {
-			return new \WP_Error( 'novamira_mainwp_free_zip_header_invalid', 'The Novamira Free package headers or version do not match the HTTPS release metadata.' );
-		}
-		return array( 'sha256' => $hash );
+		return Free_Package::release( self::MIN_FREE_VERSION );
 	}
 
 	/** @param object $site @param array<string,mixed> $stored @param array<string,mixed> $status */

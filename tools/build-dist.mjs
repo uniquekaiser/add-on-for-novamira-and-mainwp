@@ -22,6 +22,7 @@ const packages = [
       'CHANGELOG.md',
       'LICENSE',
       'README.md',
+      'SECURITY-REMEDIATION.md',
       'readme.txt',
       'vendor/yahnis-elsts/plugin-update-checker',
     ],

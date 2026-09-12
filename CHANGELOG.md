@@ -2,6 +2,18 @@
 
 All notable changes to Add-on for Novamira and MainWP are documented here.
 
+## 0.7.2 - 2026-09-12
+
+- [SECURITY] Require administrator access, per-site authorization, and operation-bound single-use confirmation tokens for destructive MCP abilities.
+- [SECURITY] Serialize AI lease state under a database connection lock and persist recovery snapshots before opening access.
+- [SECURITY] Require independently pinned Free package hashes and deploy authenticated staged bytes; reject metadata and package redirects.
+- [SECURITY] Enforce exact child origins and safe HTTP requests with explicit origin exceptions.
+- [SECURITY] Disable plaintext credential exports by default; require explicit sites, recent authentication, and one-time session-bound downloads.
+- [SECURITY] Pin release actions by full commit SHA, isolate release permissions, publish checksums, and verify GitHub provenance before publishing.
+- [FIX] Persist and verify replacement default licenses before deleting old encryption keys.
+- [IMPROVE] Add bounded audit retention, safe error codes, request origin, and redacted external forwarding.
+- [DEV] Add negative authorization, confirmation, package, endpoint, export, storage-failure, and multi-process lease tests.
+
 ## 0.7.1 - 2026-09-02
 
 - [FIX] Resolve each child site's Novamira MCP endpoint from signed WordPress site data and prefer WordPress's standard rewrite-independent REST route.

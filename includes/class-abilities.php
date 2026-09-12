@@ -44,8 +44,8 @@ final class Abilities {
 
 	/** @return bool|\WP_Error */
 	public static function permission() {
-		if ( ! current_user_can( 'read' ) ) {
-			return new \WP_Error( 'novamira_mainwp_permission_denied', 'Authentication is required.' );
+		if ( get_current_user_id() < 1 || ! current_user_can( 'manage_options' ) ) {
+			return new \WP_Error( 'novamira_mainwp_permission_denied', 'Administrator access is required.' );
 		}
 		return true;
 	}
@@ -63,10 +63,7 @@ final class Abilities {
 
 	/** @return array<string, mixed>|\WP_Error */
 	public static function provision( $input ) {
-		if ( is_array( $input ) && ! empty( $input['dry_run'] ) ) {
-			return Fleet_Service::provision( (array) $input['site_ids'], sanitize_key( (string) $input['operation'] ), true );
-		}
-		$confirmation = self::confirm_or_preview( $input, 'provision' );
+		$confirmation = self::confirm_or_preview( $input, 'provision-sites-v1' );
 		if ( null !== $confirmation ) {
 			return $confirmation;
 		}
@@ -75,7 +72,7 @@ final class Abilities {
 
 	/** @return array<string, mixed>|\WP_Error */
 	public static function set_policy( $input ) {
-		$confirmation = self::confirm_or_preview( $input, 'set-policy' );
+		$confirmation = self::confirm_or_preview( $input, 'set-site-policy-v1' );
 		if ( null !== $confirmation ) {
 			return $confirmation;
 		}
@@ -94,19 +91,19 @@ final class Abilities {
 
 	/** @return array<string, mixed>|\WP_Error */
 	public static function rotate_credential( $input ) {
-		$confirmation = self::confirm_or_preview( $input, 'rotate-credential' );
+		$confirmation = self::confirm_or_preview( $input, 'rotate-credential-v1' );
 		return null !== $confirmation ? $confirmation : Fleet_Service::rotate_credential( (int) $input['site_id'], false );
 	}
 
 	/** @return array<string, mixed>|\WP_Error */
 	public static function revoke_credential( $input ) {
-		$confirmation = self::confirm_or_preview( $input, 'revoke-credential' );
+		$confirmation = self::confirm_or_preview( $input, 'revoke-credential-v1' );
 		return null !== $confirmation ? $confirmation : Fleet_Service::revoke_credential( (int) $input['site_id'] );
 	}
 
 	/** @return array<string, mixed>|\WP_Error */
 	public static function manage_pro_license( $input ) {
-		$confirmation = self::confirm_or_preview( $input, 'manage-pro-license' );
+		$confirmation = self::confirm_or_preview( $input, 'manage-pro-license-v1' );
 		return null !== $confirmation
 			? $confirmation
 			: Fleet_Service::manage_pro_license( (int) $input['site_id'], sanitize_key( (string) $input['operation'] ), (string) ( $input['license_key'] ?? '' ) );
@@ -154,7 +151,7 @@ final class Abilities {
 
 	/** @return array<string, mixed>|\WP_Error */
 	public static function call_write_tool( $input ) {
-		$confirmation = self::confirm_or_preview( $input, 'call-write-tool' );
+		$confirmation = self::confirm_or_preview( $input, 'call-write-tool-v1' );
 		if ( null !== $confirmation ) {
 			return $confirmation;
 		}
@@ -187,7 +184,10 @@ final class Abilities {
 					'type'                 => 'object',
 					'additionalProperties' => true,
 				),
-				'execute_callback'    => $callback,
+				'execute_callback'    => static function ( $input ) use ( $callback ) {
+					$permission = self::permission();
+					return is_wp_error( $permission ) ? $permission : $callback( $input );
+				},
 				'permission_callback' => array( self::class, 'permission' ),
 				'meta'                => array(
 					'public'       => true,
@@ -197,7 +197,7 @@ final class Abilities {
 						'type'   => 'tool',
 					),
 					'annotations'  => array(
-						'instructions' => $destructive ? 'Use dry_run first and execute only after explicit user confirmation.' : '',
+						'instructions' => $destructive ? 'Request dry_run=true, show the exact operation and supplied arguments to the user, then execute the unchanged request with user_confirmed=true and its confirmation_token within five minutes. Tokens are single-use. The adapter must obtain human approval; tokens alone cannot prove it.' : '',
 						'readonly'     => $read_only,
 						'destructive'  => $destructive,
 						'idempotent'   => $read_only,
@@ -208,35 +208,72 @@ final class Abilities {
 	}
 
 	/** @return array<string, mixed>|\WP_Error|null */
-	private static function confirm_or_preview( $input, string $operation ) {
+	private static function confirm_or_preview( $input, string $slug ) {
+		$permission = self::permission();
+		if ( is_wp_error( $permission ) ) {
+			return $permission;
+		}
 		$input = is_array( $input ) ? $input : array();
+		$sites = 'provision-sites-v1' === $slug ? ( $input['site_ids'] ?? null ) : array( $input['site_id'] ?? null );
+		if ( ! is_array( $sites ) || count( $sites ) < 1 || count( $sites ) > 100 ) {
+			return new \WP_Error( 'novamira_mainwp_confirmation_invalid_input', 'Select between 1 and 100 MainWP sites.' );
+		}
+		foreach ( $sites as $site_id ) {
+			if ( ! is_int( $site_id ) || $site_id < 1 ) {
+				return new \WP_Error( 'novamira_mainwp_confirmation_invalid_input', 'MainWP site IDs must be positive integers.' );
+			}
+			$site = MainWP_Client::site( $site_id );
+			if ( is_wp_error( $site ) ) {
+				return $site;
+			}
+		}
+		$sites = array_values( array_unique( $sites ) );
+		sort( $sites, SORT_NUMERIC );
+		$arguments = $input;
+		unset( $arguments['confirm'], $arguments['user_confirmed'], $arguments['confirmation_token'], $arguments['dry_run'] );
+		if ( 'provision-sites-v1' === $slug ) {
+			$arguments['site_ids'] = $sites;
+		}
+		$ability = 'novamira-mainwp/' . $slug;
 		if ( true === ( $input['dry_run'] ?? false ) ) {
-			$preview = $input;
-			unset( $preview['license_key'], $preview['arguments'], $preview['confirm'], $preview['dry_run'] );
+			$confirmation = Confirmation::issue( $ability, $sites, $arguments );
+			if ( is_wp_error( $confirmation ) ) {
+				return $confirmation;
+			}
+			$preview = $arguments;
+			unset( $preview['license_key'], $preview['arguments'] );
 			if ( isset( $input['arguments'] ) && is_array( $input['arguments'] ) ) {
 				$preview['argument_keys'] = array_keys( $input['arguments'] );
 			}
-			return array(
-				'dry_run'   => true,
-				'operation' => $operation,
-				'preview'   => $preview,
+			return array_merge(
+				array(
+					'dry_run' => true,
+					'ability' => $ability,
+					'preview' => $preview,
+				),
+				$confirmation
 			);
 		}
-		if ( true !== ( $input['confirm'] ?? false ) ) {
-			return new \WP_Error( 'novamira_mainwp_confirmation_required', 'Set dry_run=true for a preview or confirm=true after explicit approval.' );
+		if ( true !== ( $input['user_confirmed'] ?? false ) || ! is_string( $input['confirmation_token'] ?? null ) || '' === $input['confirmation_token'] ) {
+			return new \WP_Error( 'novamira_mainwp_confirmation_required', 'Request dry_run=true first, then supply user_confirmed=true and the returned confirmation_token after explicit approval.' );
 		}
-		return null;
+		$consumed = Confirmation::consume( $input['confirmation_token'], $ability, $sites, $arguments );
+		return is_wp_error( $consumed ) ? $consumed : null;
 	}
 
 	/** @return array<string, mixed> */
 	private static function confirmation_fields(): array {
 		return array(
-			'confirm' => array(
+			'user_confirmed'     => array(
 				'type'        => 'boolean',
 				'default'     => false,
-				'description' => 'Execute after explicit user approval.',
+				'description' => 'Assert that the user approved this exact preview; requires its one-time token.',
 			),
-			'dry_run' => array(
+			'confirmation_token' => array(
+				'type'        => 'string',
+				'description' => 'Single-use token returned by the matching dry run; expires after five minutes.',
+			),
+			'dry_run'            => array(
 				'type'        => 'boolean',
 				'default'     => false,
 				'description' => 'Preview without changing a site.',

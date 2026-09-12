@@ -37,7 +37,7 @@ final class GatewayRoutingTest extends TestCase {
 				$payload = nmm_child_action( $params );
 				$action  = (string) ( $payload['action'] ?? '' );
 				$GLOBALS['nmm_child_calls'][] = array( 'site_id' => $site_id, 'what' => $what, 'action' => $action );
-				if ( 'ai-open' === $action ) {
+				if ( 'ai-snapshot' === $action || 'ai-open' === $action ) {
 					$data = array( 'changed' => true, 'restore' => array( 'missing' => 'missing-' . $site_id, 'enabled' => '0', 'domain' => 'missing-' . $site_id ) );
 				} elseif ( 'status' === $action ) {
 					$data = array( 'mcp' => array_merge( $GLOBALS['nmm_status_endpoints'][ $site_id ], array( 'registered' => true, 'adapter_available' => true, 'dependency_error_code' => '' ) ) );
@@ -64,6 +64,9 @@ final class GatewayRoutingTest extends TestCase {
 		}
 
 		$GLOBALS['nmm_http_handler'] = static function ( string $url, array $args ): array {
+			self::assertTrue( $args['reject_unsafe_urls'] );
+			self::assertSame( 0, $args['redirection'] );
+			self::assertTrue( $args['sslverify'] );
 			$payload = json_decode( (string) $args['body'], true );
 			$GLOBALS['nmm_mcp_payloads'][] = $payload;
 			$GLOBALS['nmm_mcp_urls'][] = $url;
@@ -106,8 +109,10 @@ final class GatewayRoutingTest extends TestCase {
 		self::assertSame( 1, $one['structuredContent']['site'] );
 		self::assertSame( 2, $two['structuredContent']['site'] );
 		self::assertCount( 2, $GLOBALS['nmm_http_deletes'] );
-		self::assertSame( array( 'ai-open', 'ai-restore', 'ai-open', 'ai-restore' ), array_column( $GLOBALS['nmm_child_calls'], 'action' ) );
-		self::assertSame( array( 'code_snippet', 'code_snippet', 'code_snippet', 'code_snippet' ), array_column( $GLOBALS['nmm_child_calls'], 'what' ) );
+		self::assertTrue( $GLOBALS['nmm_http_deletes'][0][1]['reject_unsafe_urls'] );
+		self::assertSame( 0, $GLOBALS['nmm_http_deletes'][0][1]['redirection'] );
+		self::assertSame( array( 'ai-snapshot', 'ai-open', 'ai-restore', 'ai-snapshot', 'ai-open', 'ai-restore' ), array_column( $GLOBALS['nmm_child_calls'], 'action' ) );
+		self::assertSame( array( 'code_snippet', 'code_snippet', 'code_snippet', 'code_snippet', 'code_snippet', 'code_snippet' ), array_column( $GLOBALS['nmm_child_calls'], 'what' ) );
 		self::assertArrayNotHasKey( 'X-Novamira-MainWP-Lease', $GLOBALS['nmm_mcp_headers'][0] );
 		self::assertArrayNotHasKey( 'X-Novamira-MainWP-Lease', $GLOBALS['nmm_http_deletes'][0][1]['headers'] );
 		$notifications = array_values(
@@ -135,6 +140,8 @@ final class GatewayRoutingTest extends TestCase {
 		self::assertSame( 'one', $resource['contents'][0]['text'] );
 		self::assertSame( 'two prompt', $prompt['description'] );
 		self::assertCount( 2, $GLOBALS['nmm_http_deletes'] );
+		self::assertTrue( $GLOBALS['nmm_http_deletes'][0][1]['reject_unsafe_urls'] );
+		self::assertSame( 0, $GLOBALS['nmm_http_deletes'][0][1]['redirection'] );
 	}
 
 	public function test_tool_classification_fails_closed_and_separates_reads_from_writes(): void {
@@ -185,4 +192,25 @@ final class GatewayRoutingTest extends TestCase {
 		self::assertSame( array( $stale ), $GLOBALS['nmm_mcp_urls'] );
 		self::assertNotContains( 'status', array_column( $GLOBALS['nmm_child_calls'], 'action' ) );
 	}
+	public function test_changed_endpoint_port_never_receives_credentials(): void {
+		Storage::update_site( 1, array( 'status_cache' => array( 'mcp' => array( 'endpoint' => 'https://one.test:8443/wp-json/mcp/novamira' ) ) ) );
+		$result = Remote_MCP_Client::list_components( 1, 'tools' );
+		self::assertSame( 'novamira_mainwp_mcp_endpoint_origin_mismatch', $result->get_error_code() );
+		self::assertSame( array(), $GLOBALS['nmm_mcp_urls'] );
+		self::assertSame( array(), $GLOBALS['nmm_http_deletes'] );
+	}
+
+	public function test_redirect_response_is_rejected_without_forwarding_credentials(): void {
+		$requests = array();
+		$GLOBALS['nmm_http_handler'] = static function ( $url, $args ) use ( &$requests ) {
+			$requests[] = $url;
+			self::assertSame( 0, $args['redirection'] );
+			self::assertTrue( $args['reject_unsafe_urls'] );
+			return array( 'response' => array( 'code' => 302 ), 'headers' => array( 'location' => 'https://one.test:8443/wp-json/mcp/novamira' ), 'body' => '' );
+		};
+		$result = Remote_MCP_Client::call_tool( 1, 'site-one-write', array(), 'write' );
+		self::assertSame( 'novamira_mainwp_mcp_http_error', $result->get_error_code() );
+		self::assertSame( array( 'https://one.test/wp-json/mcp/novamira' ), $requests );
+	}
+
 }

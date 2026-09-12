@@ -194,6 +194,9 @@ try {
 			delete_option( 'novamira_ai_abilities_domain' );
 		}
 		$__nmm_reply( true, array( 'manual_enabled' => $__nmm_manual_enabled() ) );
+	} elseif ( 'ai-snapshot' === $__nmm_action ) {
+		$missing = 'novamira-mainwp-missing-' . wp_generate_uuid4();
+		$__nmm_reply( true, array( 'restore' => array( 'missing' => $missing, 'enabled' => get_option( 'novamira_ai_abilities_enabled', $missing ), 'domain' => get_option( 'novamira_ai_abilities_domain', $missing ) ) ) );
 	} elseif ( 'ai-open' === $__nmm_action ) {
 		if ( ! defined( 'NOVAMIRA_VERSION' ) ) {
 			throw new \RuntimeException( 'Novamira Free must be active before the MCP gateway can open an access window.' );
@@ -208,13 +211,26 @@ try {
 		} elseif ( 'manual-only' === $lifecycle && ! $__nmm_manual_enabled() ) {
 			$__nmm_reply( false, array(), 'manual_enable_required', 'Enable Novamira AI abilities manually before using this site.' );
 		} else {
-			$missing = 'novamira-mainwp-missing-' . wp_generate_uuid4();
+			$restore = isset( $__nmm_params['restore'] ) && is_array( $__nmm_params['restore'] ) ? $__nmm_params['restore'] : array();
+			$missing = isset( $restore['missing'] ) ? (string) $restore['missing'] : '';
 			$old_enabled = get_option( 'novamira_ai_abilities_enabled', $missing );
 			$old_domain  = get_option( 'novamira_ai_abilities_domain', $missing );
+			if ( '' === $missing || ! array_key_exists( 'enabled', $restore ) || ! array_key_exists( 'domain', $restore ) || $restore['enabled'] !== $old_enabled || $restore['domain'] !== $old_domain ) {
+				$__nmm_reply( false, array(), 'restore_state_changed', 'AI settings changed after the restore snapshot was captured. Retry after recovery.' );
+				return;
+			}
+			if ( (int) ( $__nmm_params['expires'] ?? 0 ) <= time() ) {
+				$__nmm_reply( false, array(), 'access_window_expired', 'The AI access window expired before it could open.' );
+				return;
+			}
 			$changed = 'just-in-time' === $lifecycle && ! $__nmm_manual_enabled();
 			if ( $changed ) {
 				update_option( 'novamira_ai_abilities_enabled', '1', false );
 				update_option( 'novamira_ai_abilities_domain', (string) wp_parse_url( home_url(), PHP_URL_HOST ), false );
+				if ( '1' !== get_option( 'novamira_ai_abilities_enabled', '' ) || (string) wp_parse_url( home_url(), PHP_URL_HOST ) !== get_option( 'novamira_ai_abilities_domain', '' ) ) {
+					$__nmm_reply( false, array(), 'ai_open_persistence_failed', 'The child AI settings could not be persisted.' );
+					return;
+				}
 			}
 			$__nmm_reply( true, array( 'changed' => $changed, 'production' => $is_production, 'restore' => array( 'missing' => $missing, 'enabled' => $old_enabled, 'domain' => $old_domain ) ) );
 		}
@@ -234,7 +250,11 @@ try {
 			} else {
 				delete_option( 'novamira_ai_abilities_domain' );
 			}
-			$__nmm_reply( true, array( 'restored' => true, 'manual_enabled' => $__nmm_manual_enabled() ) );
+			if ( get_option( 'novamira_ai_abilities_enabled', $missing ) !== ( $restore['enabled'] ?? $missing ) || get_option( 'novamira_ai_abilities_domain', $missing ) !== ( $restore['domain'] ?? $missing ) ) {
+				$__nmm_reply( false, array(), 'ai_restore_persistence_failed', 'The child AI restore settings could not be persisted.' );
+			} else {
+				$__nmm_reply( true, array( 'restored' => true, 'manual_enabled' => $__nmm_manual_enabled() ) );
+			}
 		}
 	} elseif ( 'pro-license' === $__nmm_action ) {
 		$operation = isset( $__nmm_params['operation'] ) ? sanitize_key( (string) $__nmm_params['operation'] ) : '';

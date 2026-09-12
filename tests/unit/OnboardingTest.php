@@ -43,7 +43,7 @@ final class OnboardingTest extends TestCase {
 		self::assertStringContainsString( 'managed credential', $options['mainwp-novamira-addon']['action_after_install'] );
 	}
 
-	public function test_scoped_mainwp_package_request_uses_only_the_validated_release(): void {
+	public function test_scoped_mainwp_package_request_rejects_an_unauthenticated_legacy_cache(): void {
 		$GLOBALS['nmm_transients']['novamira_mainwp_free_release'] = array(
 			'version'      => '1.12.0',
 			'download_url' => 'https://packages.example/novamira-1.12.0.zip',
@@ -56,8 +56,8 @@ final class OnboardingTest extends TestCase {
 
 		$info = Onboarding::plugin_information( false, 'plugin_information', (object) array( 'slug' => 'novamira' ) );
 		self::assertIsObject( $info );
-		self::assertSame( '1.12.0', $info->version );
-		self::assertSame( 'https://packages.example/novamira-1.12.0.zip', $info->download_link );
+		self::assertSame( '', $info->version );
+		self::assertSame( '', $info->download_link );
 		self::assertSame(
 			$info->download_link,
 			Onboarding::prepare_download_url( 'https://downloads.wordpress.org/untrusted.zip', array( 'type' => 'plugin', 'slug' => 'novamira' ) )

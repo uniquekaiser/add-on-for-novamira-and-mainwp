@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace Novamira\MainWP;
 
 final class Storage {
+	public const SCHEMA_VERSION         = '0.7.2';
 	public const PACKAGE_OPTION         = 'novamira_mainwp_packages';
 	public const DEFAULT_LICENSE_OPTION = 'novamira_mainwp_default_pro_license';
 	public const PRO_PACKAGE_SOURCE     = 'novamira_mainwp_pro_package_source';
@@ -58,12 +59,16 @@ final class Storage {
 			duration_ms bigint(20) unsigned NOT NULL DEFAULT 0,
 			correlation_id varchar(64) NOT NULL,
 			argument_keys text NULL,
+			error_code varchar(64) NOT NULL DEFAULT '',
+			surface varchar(32) NOT NULL DEFAULT '',
+			client varchar(64) NOT NULL DEFAULT '',
 			PRIMARY KEY  (id),
 			KEY site_time (site_id,event_time),
+			KEY event_time (event_time),
 			KEY correlation (correlation_id)
 		) {$charset};"
 		);
-		update_option( 'novamira_mainwp_db_version', NOVAMIRA_MAINWP_VERSION, false );
+		update_option( 'novamira_mainwp_db_version', self::SCHEMA_VERSION, false );
 	}
 
 	/** @return array<string, mixed> */
@@ -181,20 +186,50 @@ final class Storage {
 
 	/** @return true|\WP_Error */
 	public static function set_default_pro_license( string $license ) {
-		$old = get_option( self::DEFAULT_LICENSE_OPTION, '' );
-		if ( is_string( $old ) && '' !== $old ) {
-			Crypto::delete_key( $old );
+		$lock = Database_Lock::acquire( 'default-license' );
+		if ( is_wp_error( $lock ) ) {
+			return $lock;
 		}
-		if ( '' === trim( $license ) ) {
-			delete_option( self::DEFAULT_LICENSE_OPTION );
+		try {
+			$old = Database_Lock::read_option( self::DEFAULT_LICENSE_OPTION, '' );
+			if ( is_wp_error( $old ) ) {
+				return $old;
+			}
+			$old     = is_string( $old ) ? $old : '';
+			$license = trim( $license );
+			if ( '' === $license ) {
+				if ( ! $lock->refresh() || ! Database_Lock::remove_option( self::DEFAULT_LICENSE_OPTION ) ) {
+					return new \WP_Error( 'novamira_mainwp_license_persistence_failed', 'The stored license could not be removed safely.' );
+				}
+				Crypto::delete_key( $old );
+				return true;
+			}
+			$encrypted = Crypto::encrypt( $license );
+			if ( is_wp_error( $encrypted ) ) {
+				return $encrypted;
+			}
+			if ( ! $lock->refresh() || ! Database_Lock::write_option( self::DEFAULT_LICENSE_OPTION, $encrypted ) ) {
+				// Keep both keys on an uncertain readback; delete only a provably unused new key.
+				if ( Database_Lock::read_option( self::DEFAULT_LICENSE_OPTION, '' ) === $old ) {
+					self::delete_replaced_key( $encrypted, $old );
+				}
+				return new \WP_Error( 'novamira_mainwp_license_persistence_failed', 'The replacement license could not be stored safely. The previous key has been preserved.' );
+			}
+			self::delete_replaced_key( $old, $encrypted );
 			return true;
+		} finally {
+			$lock->release();
 		}
-		$encrypted = Crypto::encrypt( trim( $license ) );
-		if ( is_wp_error( $encrypted ) ) {
-			return $encrypted;
+	}
+
+	/** Never delete a key file reused by the replacement encryption provider. */
+	private static function delete_replaced_key( string $previous, string $current ): void {
+		$previous_data = json_decode( $previous, true );
+		$current_data  = json_decode( $current, true );
+		if ( ! is_array( $previous_data ) || ( $previous_data['file_key'] ?? '' ) === ( $current_data['file_key'] ?? '' ) ) {
+			return;
 		}
-		update_option( self::DEFAULT_LICENSE_OPTION, $encrypted, false );
-		return true;
+		Crypto::delete_key( $previous );
 	}
 
 	/** @return array<string, mixed> */
