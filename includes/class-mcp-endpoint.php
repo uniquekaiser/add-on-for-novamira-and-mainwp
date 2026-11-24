@@ -70,7 +70,7 @@ final class MCP_Endpoint {
 
 		// Parse exactly one route parameter; duplicate keys and extra query options are forbidden.
 		$query_route = 1 === preg_match( '#^rest_route=[^&;=]+$#D', $query ) && 'rest_route=/mcp/novamira' === rawurldecode( $query );
-		if ( null !== wp_parse_url( $candidate, PHP_URL_FRAGMENT ) || ( '' !== $query && ! $query_route ) || ( ! self::has_mcp_path( $path ) && ! $query_route ) ) {
+		if ( false !== strpos( $candidate, '#' ) || ( '' !== $query && ! $query_route ) || ( ! self::has_mcp_path( $path ) && ! $query_route ) ) {
 			return new \WP_Error( 'novamira_mainwp_mcp_endpoint_invalid', 'The child-reported URL is not a Novamira MCP endpoint.' );
 		}
 

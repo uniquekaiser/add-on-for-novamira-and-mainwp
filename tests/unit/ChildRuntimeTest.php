@@ -78,6 +78,28 @@ final class ChildRuntimeTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['nmm_options'] );
 	}
 
+	public function test_policy_updates_only_release_blocks_introduced_by_the_dashboard(): void {
+		$GLOBALS['nmm_options'] = array();
+		$blocked = array( 'disabled' => true );
+		$local = array( 'novamira/local' => $blocked, 'another/local' => $blocked );
+		$GLOBALS['nmm_ability_rules'] = $local;
+
+		$params = array( 'disabled_abilities' => array( 'novamira/local', 'novamira/managed' ) );
+		$this->execute_ai( 'set-rules', $params );
+		$this->execute_ai( 'set-rules', $params );
+		self::assertSame( $local + array( 'novamira/managed' => $blocked ), novamira_get_ability_rules() );
+		$this->execute_ai( 'set-rules', array( 'disabled_abilities' => array() ) );
+		self::assertSame( $local, novamira_get_ability_rules() );
+	}
+
+	public function test_upgrading_a_policy_releases_previously_managed_rules_only(): void {
+		$GLOBALS['nmm_options'] = array();
+		$blocked = array( 'disabled' => true );
+		$GLOBALS['nmm_ability_rules'] = array( 'novamira/old' => $blocked, 'novamira/local' => $blocked, 'another/local' => $blocked );
+		$this->execute_ai( 'set-rules', array( 'previous_disabled' => array( 'novamira/old', 'another/local' ) ) );
+		self::assertSame( array( 'novamira/local' => $blocked, 'another/local' => $blocked ), novamira_get_ability_rules() );
+	}
+
 	private function execute_ai( string $action, array $params = array() ) {
 		ob_start();
 		eval( Child_Runtime::script( $action, $params ) );

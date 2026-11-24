@@ -60,4 +60,22 @@ final class DashboardCredentialRotationTest extends TestCase {
 		self::assertSame( 'old-uuid', $GLOBALS['nmm_dashboard_calls'][1]['params']['uuid'] );
 		self::assertNotContains( 'old_uuid', array_keys( $GLOBALS['nmm_dashboard_calls'][0]['params'] ) );
 	}
+
+	public function test_failed_rotation_preserves_the_working_password_and_rolls_back_the_new_one(): void {
+		$database = $GLOBALS['wpdb'];
+		$failing = new class() extends NMM_Test_WPDB {
+			public function replace( string $table, array $data ) { return false; }
+		};
+		$failing->site_records = $database->site_records;
+		$GLOBALS['wpdb'] = $failing;
+		try {
+			$result = Fleet_Service::rotate_credential( 5, true );
+			self::assertInstanceOf( WP_Error::class, $result );
+			self::assertSame( 'novamira_mainwp_credential_save_failed', $result->get_error_code() );
+			self::assertSame( 'old-uuid', Storage::get_site( 5 )['credential_uuid'] );
+			self::assertSame( 'new-uuid', $GLOBALS['nmm_dashboard_calls'][1]['params']['uuid'] );
+		} finally {
+			$GLOBALS['wpdb'] = $database;
+		}
+	}
 }

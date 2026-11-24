@@ -2,6 +2,14 @@
 
 All notable changes to Add-on for Novamira and MainWP are documented here.
 
+## 0.7.3 - 2026-11-21
+
+- [FIX] Reject MCP endpoint fragments consistently on PHP 7.4 and later.
+- [FIX] Verify replacement credentials before retiring the old child application password. Roll back the replacement when a failed save leaves the original row intact.
+- [FIX] Preserve locally blocked Novamira and third-party abilities when applying or clearing a fleet policy. Repeated saves retain rule ownership.
+- [COMPAT] Surface Novamira Read Mode and domain-lock status. Just-in-time access uses the canonical site host and respects a changed-domain lock.
+- [IMPROVE] Use MainWP's field selection for fleet inventory and eliminate a redundant policy query per site.
+
 ## 0.7.2 - 2026-09-12
 
 - [SECURITY] Require administrator access, per-site authorization, and operation-bound single-use confirmation tokens for destructive MCP abilities.

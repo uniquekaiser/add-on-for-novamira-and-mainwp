@@ -2,9 +2,9 @@
 Contributors: synergetic
 Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
-Tested up to: 7.1
+Tested up to: 7.1.4
 Requires PHP: 7.4
-Stable tag: 0.7.2
+Stable tag: 0.7.3
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -43,6 +43,12 @@ Version 0.7.2 includes the security controls described here. Destructive MCP cal
 Free package deployment requires an independently authenticated version/hash/URL pin. Plaintext credential export is disabled by default and requires explicit site selection and recent-authentication integration. Child endpoints must match the managed origin; exceptions require administrator-owned configuration. See SECURITY-REMEDIATION.md for required configuration and verification boundaries.
 
 == Changelog ==
+
+= 0.7.3 =
+* [FIX] Verify replacement credentials before retiring the previous child application password.
+* [FIX] Preserve child-managed ability blocks when saving a fleet policy or onboarding a site.
+* [COMPAT] Report Novamira Read Mode and domain changes. Just-in-time access respects the child's domain lock.
+* [IMPROVE] Request only the MainWP inventory fields used by Fleet and reuse each site's saved policy.
 
 = 0.7.2 =
 * [SECURITY] Require administrator access, per-site authorization, and operation-bound five-minute single-use confirmation tokens for destructive MCP abilities.

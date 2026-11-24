@@ -75,6 +75,23 @@ final class Fleet_Service {
 	 * @return array<string, mixed>|\WP_Error
 	 */
 	public static function set_policy( int $site_id, array $policy ) {
+		$site = MainWP_Client::site( $site_id );
+		if ( is_wp_error( $site ) ) {
+			return $site;
+		}
+		$lock = Database_Lock::acquire( 'policy-' . $site_id );
+		if ( is_wp_error( $lock ) ) {
+			return $lock;
+		}
+		try {
+			return self::sync_policy( $site_id, $policy );
+		} finally {
+			$lock->release();
+		}
+	}
+
+	/** @param array<string, mixed> $policy */
+	private static function sync_policy( int $site_id, array $policy ) {
 		$clean  = array(
 			'gateway_enabled'     => true === ( $policy['gateway_enabled'] ?? false ),
 			'production_allowed'  => true === ( $policy['production_allowed'] ?? false ),
@@ -88,12 +105,15 @@ final class Fleet_Service {
 			'set-rules',
 			array(
 				'disabled_abilities' => $clean['disabled_abilities'],
+				'previous_disabled'  => Storage::policy( $site_id )['disabled_abilities'],
 			)
 		);
 		if ( is_wp_error( $remote ) ) {
 			return $remote;
 		}
-		Storage::update_site( $site_id, array( 'policy' => $clean ) );
+		if ( ! Storage::update_site( $site_id, array( 'policy' => $clean ) ) ) {
+			return new \WP_Error( 'novamira_mainwp_policy_save_failed', 'The child synchronized but the Dashboard could not save the policy. Retry the same policy.' );
+		}
 		Audit::record( $site_id, 'set-policy', 'success', 0, $clean );
 		return array(
 			'site_id' => $site_id,
@@ -138,7 +158,7 @@ final class Fleet_Service {
 		$old_secret   = (string) $stored['credential_secret'];
 		$old_username = (string) $stored['credential_username'];
 		$old_uuid     = (string) $stored['credential_uuid'];
-		Storage::update_site(
+		$saved        = Storage::update_site(
 			$site_id,
 			array(
 				'credential_username' => (string) $result['username'],
@@ -146,6 +166,27 @@ final class Fleet_Service {
 				'credential_uuid'     => (string) $result['uuid'],
 			)
 		);
+		$current      = Storage::get_site( $site_id );
+		if ( ! $saved || $encrypted !== $current['credential_secret'] || $result['uuid'] !== $current['credential_uuid'] || $result['username'] !== $current['credential_username'] ) {
+			$message = 'The replacement credential could not be verified. Review the managed application passwords on the child.';
+			// Only undo the new credential when the original row is positively identified.
+			if ( '' !== $old_uuid && $old_uuid !== $result['uuid'] && $old_uuid === $current['credential_uuid'] && $old_secret === $current['credential_secret'] && $old_username === $current['credential_username'] ) {
+				$rollback = MainWP_Client::child_operation(
+					$site_id,
+					'credential-revoke',
+					array(
+						'username' => $result['username'],
+						'uuid'     => $result['uuid'],
+					)
+				);
+				if ( ! is_wp_error( $rollback ) && ! empty( $rollback['revoked'] ) ) {
+					Crypto::delete_key( $encrypted );
+					$message = 'The replacement credential could not be saved and was revoked. The original credential is still configured.';
+				}
+			}
+			Audit::record( $site_id, 'rotate-credential', 'error', 0, array(), '', 'novamira_mainwp_credential_save_failed' );
+			return new \WP_Error( 'novamira_mainwp_credential_save_failed', $message );
+		}
 		if ( '' !== $old_secret ) {
 			Crypto::delete_key( $old_secret );
 		}
@@ -523,7 +564,7 @@ final class Fleet_Service {
 			'available_abilities_known' => $status['available_abilities_known'] ?? false,
 			'mcp'                       => isset( $status['mcp'] ) && is_array( $status['mcp'] ) ? $status['mcp'] : array(),
 			'status_known'              => $status_known,
-			'policy'                    => Storage::policy( (int) $site->id ),
+			'policy'                    => Storage::policy_from_record( $stored ),
 			'last_success'              => $stored['last_success'],
 			'status_updated_at'         => $stored['status_checked_at'],
 		);

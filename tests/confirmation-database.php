@@ -11,6 +11,9 @@ class NMM_Confirmation_WPDB extends NMM_Test_WPDB {
 	public $stale_value = null;
 
 	public function get_var( string $query ) {
+		if ( false !== strpos( $query, "'nmm:" ) || false !== strpos( $query, "'novamira_mainwp_lock_" ) ) {
+			return parent::get_var( $query );
+		}
 		if ( preg_match( "/^SELECT option_value FROM wp_options WHERE option_name = '([^']+)'$/", $query, $matches ) ) {
 			return $this->stale_value ?? ( $this->confirmation_rows[ $matches[1] ] ?? null );
 		}
@@ -18,6 +21,9 @@ class NMM_Confirmation_WPDB extends NMM_Test_WPDB {
 	}
 
 	public function query( string $query ) {
+		if ( false !== strpos( $query, "'novamira_mainwp_lock_" ) ) {
+			return parent::query( $query );
+		}
 		if ( preg_match( "/^INSERT INTO wp_options .* VALUES \\('([^']+)', '([^']+)', 'no'\\)$/", $query, $matches ) ) {
 			if ( $this->fail_insert || isset( $this->confirmation_rows[ $matches[1] ] ) ) return false;
 			$this->confirmation_rows[ $matches[1] ] = $matches[2];

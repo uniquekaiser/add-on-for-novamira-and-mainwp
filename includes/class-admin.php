@@ -413,7 +413,7 @@ final class Admin {
 				<td><strong><a href="<?php echo esc_url( $site_admin ); ?>"><?php echo esc_html( $site['name'] ); ?></a></strong><br><small><a href="<?php echo esc_url( $site['url'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $site['url'] ); ?></a></small><?php echo ! empty( $site['sync_error'] ) ? '<br><span class="nmm-bad">Sync issue</span>' : ''; ?><br><small><?php echo $status_known ? 'Live settings checked ' . esc_html( (string) $site['status_updated_at'] ) . ' UTC' : '<span class="nmm-muted">Live settings not checked yet</span>'; ?></small></td>
 				<td><?php echo esc_html( self::plugin_state( $site['free'] ) ); ?><?php echo ! empty( $site['free']['update_available'] ) ? '<br><span class="ui tiny orange label">Update ' . esc_html( (string) $site['free']['update_version'] ) . '</span>' : ''; ?></td>
 				<td><?php echo esc_html( self::plugin_state( $site['pro'] ) ); ?><br><small><?php echo ! $status_known ? '<span class="nmm-muted">License not checked</span>' : ( ! empty( $site['pro']['installed'] ) ? ( ! empty( $site['pro']['license_known'] ) ? ( ! empty( $site['pro']['license_active'] ) ? '<span class="nmm-ok">Licensed</span>' : 'Not licensed' ) : '<span class="nmm-muted">License unavailable while Pro is inactive</span>' ) : 'Optional / not installed' ); ?></small></td>
-				<td><?php echo ! $status_known ? '<span class="nmm-muted">Not checked</span>' : ( ! empty( $site['ai']['manual_enabled'] ) ? '<span class="nmm-ok">Enabled in Novamira</span>' : 'Off in Novamira' ); ?><br><small><?php echo esc_html( (string) $site['policy']['ai_lifecycle'] ); ?><?php echo ! empty( $site['policy']['production_allowed'] ) ? ' / production approved' : ' / production denied'; ?></small></td>
+				<td><?php echo esc_html( self::ai_status( $site ) ); ?><br><small><?php echo esc_html( (string) $site['policy']['ai_lifecycle'] ); ?><?php echo ! empty( $site['policy']['production_allowed'] ) ? ' / production approved' : ' / production denied'; ?></small></td>
 				<td><?php echo ! empty( $site['credential']['managed'] ) ? '<span class="nmm-ok">Managed</span>' : '<span class="nmm-bad">Missing</span>'; ?><?php echo false === ( $site['credential']['healthy'] ?? null ) ? '<br><small class="nmm-bad">Needs rotation</small>' : ''; ?><?php echo $status_known && false === ( $site['credential']['available_for_user'] ?? null ) ? '<br><small class="nmm-bad">App passwords unavailable for connected admin</small>' : ''; ?></td>
 				<td><?php echo ! $status_known ? '<span class="nmm-muted">Not checked</span>' : ( ! empty( $site['available_abilities_known'] ) ? esc_html( (string) count( (array) $site['available_abilities'] ) ) : 'Unavailable while AI is off' ); ?></td>
 				<td><?php echo esc_html( (string) ( $site['last_success'] ?? 'Never' ) ); ?></td>
@@ -671,13 +671,29 @@ else :
 		echo '<tr><th>URL</th><td>' . esc_html( $site['url'] ) . '</td></tr>';
 		echo '<tr><th>Novamira Free</th><td>' . esc_html( self::plugin_state( $site['free'] ) ) . '</td></tr>';
 		echo '<tr><th>Novamira Pro</th><td>' . esc_html( self::plugin_state( $site['pro'] ) ) . ' / ' . ( $status_known ? ( ! empty( $site['pro']['license_known'] ) ? ( ! empty( $site['pro']['license_active'] ) ? 'Licensed' : 'Not licensed' ) : 'License unavailable while Pro is inactive' ) : 'License not checked' ) . '</td></tr>';
-		echo '<tr><th>AI</th><td>' . ( $status_known ? ( ! empty( $site['ai']['manual_enabled'] ) ? 'Enabled in Novamira' : 'Disabled in Novamira' ) : 'Not checked' ) . ' / ' . esc_html( (string) ( $policy['ai_lifecycle'] ?? 'just-in-time' ) ) . '</td></tr>';
+		echo '<tr><th>AI</th><td>' . esc_html( self::ai_status( $site ) ) . ' / ' . esc_html( (string) ( $policy['ai_lifecycle'] ?? 'just-in-time' ) ) . '</td></tr>';
 		echo '<tr><th>Production</th><td>' . ( ! empty( $policy['production_allowed'] ) ? 'Approved' : 'Denied' ) . '</td></tr>';
 		echo '<tr><th>Credential</th><td>' . ( ! empty( $site['credential']['managed'] ) ? 'Managed' : 'Missing' ) . '</td></tr>';
 		echo '<tr><th>Abilities</th><td>' . ( $status_known ? esc_html( implode( ', ', (array) ( $site['available_abilities'] ?? array() ) ) ) : 'Not checked' ) . '</td></tr>';
 		echo '<tr><th>Live settings checked</th><td>' . esc_html( (string) ( $site['status_updated_at'] ?? 'Never' ) ) . '</td></tr>';
 		echo '<tr><th>Last successful call</th><td>' . esc_html( (string) ( $site['last_success'] ?? 'Never' ) ) . '</td></tr>';
 		echo '</tbody></table>';
+	}
+
+	/** @param array<string,mixed> $site */
+	private static function ai_status( array $site ): string {
+		if ( empty( $site['status_known'] ) || ! isset( $site['ai']['manual_enabled'] ) ) {
+			return __( 'Not checked', 'mainwp-novamira-addon' );
+		}
+		$ai     = $site['ai'];
+		$status = $ai['manual_enabled'] ? __( 'Enabled in Novamira', 'mainwp-novamira-addon' ) : __( 'Off in Novamira', 'mainwp-novamira-addon' );
+		if ( ! empty( $ai['domain_mismatch'] ) ) {
+			$status = __( 'Disabled after a domain change', 'mainwp-novamira-addon' );
+		}
+		if ( ! empty( $ai['read_mode'] ) ) {
+			$status .= ' / ' . __( 'Read Mode', 'mainwp-novamira-addon' );
+		}
+		return $status;
 	}
 
 	private static function action_button( int $site_id, string $action, string $label ): void {

@@ -117,7 +117,11 @@ final class Storage {
 
 	/** @return array<string, mixed> */
 	public static function policy( int $site_id ): array {
-		$site          = self::get_site( $site_id );
+		return self::policy_from_record( self::get_site( $site_id ) );
+	}
+
+	/** @param array<string, mixed> $site */
+	public static function policy_from_record( array $site ): array {
 		$policy        = is_array( $site['policy'] ) ? $site['policy'] : array();
 		$lifecycle     = isset( $policy['ai_lifecycle'] ) && in_array( $policy['ai_lifecycle'], array( 'just-in-time', 'manual-only', 'disabled' ), true ) ? (string) $policy['ai_lifecycle'] : 'just-in-time';
 		$ability_names = static function ( $values ): array {

@@ -44,8 +44,7 @@ final class MainWP_Client {
 			'items_per_page' => $per_page,
 			'offset'         => ( $page - 1 ) * $per_page,
 			'rowcount'       => $per_page,
-			'full_data'      => true,
-			'fields'         => array( 'id', 'name', 'url', 'adminname', 'plugins', 'plugin_upgrades', 'suspended', 'sync_errors' ),
+			'select_data'    => array( 'id', 'name', 'url', 'plugins', 'plugin_upgrades', 'suspended', 'sync_errors' ),
 		);
 		if ( '' !== trim( $search ) ) {
 			$args['s'] = trim( $search );

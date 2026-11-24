@@ -93,7 +93,7 @@ try {
 			foreach ( wp_get_abilities() as $ability ) {
 				if ( is_object( $ability ) && method_exists( $ability, 'get_name' ) ) {
 					$name = (string) $ability->get_name();
-					if ( 0 === strpos( $name, 'novamira/' ) ) {
+				if ( 0 === strpos( $name, 'novamira/' ) && ( ! function_exists( 'novamira_read_mode_hides_ability' ) || ! novamira_read_mode_hides_ability( $ability ) ) ) {
 						$abilities[] = $name;
 					}
 				}
@@ -116,6 +116,8 @@ try {
 				'pro'                       => $pro,
 				'ai'                        => array(
 					'manual_enabled' => $__nmm_manual_enabled(),
+					'read_mode' => function_exists( 'novamira_is_read_mode' ) ? novamira_is_read_mode() : null,
+					'domain_mismatch' => function_exists( 'novamira_is_domain_mismatch' ) ? novamira_is_domain_mismatch() : null,
 					'production'     => $__nmm_production(),
 				),
 				'application_passwords'     => array(
@@ -166,17 +168,57 @@ try {
 			$__nmm_reply( true, array( 'revoked' => (bool) \WP_Application_Passwords::delete_application_password( $user->ID, $uuid ) ) );
 		}
 	} elseif ( 'set-rules' === $__nmm_action ) {
-		$rules = array();
+		$requested = array();
 		foreach ( (array) ( $__nmm_params['disabled_abilities'] ?? array() ) as $name ) {
 			$name = is_scalar( $name ) ? (string) $name : '';
 			if ( 1 === preg_match( '/^novamira\/[a-z0-9][a-z0-9\/-]*$/', $name ) ) {
+				$requested[] = $name;
+			}
+		}
+		// Older versions replaced the entire rule set with the Dashboard's previous list.
+		$ownership_option = 'novamira_mainwp_managed_ability_blocks';
+		$owned = (array) get_option( $ownership_option, $__nmm_params['previous_disabled'] ?? array() );
+		$owned = array_values( preg_grep( '/^novamira\/[a-z0-9][a-z0-9\/-]*$/D', array_filter( $owned, 'is_string' ) ) );
+		if ( ! function_exists( 'novamira_get_ability_rules' ) || ! function_exists( 'novamira_update_ability_rules' ) ) {
+			if ( $requested || $owned ) {
+				$__nmm_reply( false, array(), 'ability_rules_unavailable', 'Activate Novamira Free to synchronize blocked abilities.' );
+			} else {
+				$__nmm_reply( true, array( 'ability_rules' => array(), 'rules_synced' => false ) );
+			}
+			return;
+		}
+		$current_rules = novamira_get_ability_rules();
+		$rules = $current_rules;
+		foreach ( $requested as $name ) {
+			if ( empty( $rules[ $name ]['disabled'] ) ) {
+				$owned[] = $name;
 				$rules[ $name ] = array( 'disabled' => true );
 			}
 		}
-		if ( function_exists( 'novamira_update_ability_rules' ) ) {
+		$owned = array_values( array_unique( $owned ) );
+		// Record claims before the upstream write so a retry can finish either change.
+		update_option( $ownership_option, $owned, false );
+		if ( $owned !== get_option( $ownership_option ) ) {
+			throw new \RuntimeException( 'Could not save managed ability blocks.' );
+		}
+		foreach ( array_diff( $owned, $requested ) as $name ) {
+			unset( $rules[ $name ] );
+		}
+		if ( $rules !== $current_rules ) {
 			novamira_update_ability_rules( $rules );
 		}
-		$__nmm_reply( true, array( 'ability_rules' => $rules ) );
+		$actual_rules = novamira_get_ability_rules();
+		foreach ( array_unique( array_merge( $owned, $requested ) ) as $name ) {
+			if ( ! empty( $actual_rules[ $name ]['disabled'] ) !== in_array( $name, $requested, true ) ) {
+				throw new \RuntimeException( 'Could not synchronize managed ability blocks.' );
+			}
+		}
+		$owned = array_values( array_intersect( $owned, $requested ) );
+		update_option( $ownership_option, $owned, false );
+		if ( $owned !== get_option( $ownership_option ) ) {
+			throw new \RuntimeException( 'Could not release managed ability blocks.' );
+		}
+		$__nmm_reply( true, array( 'ability_rules' => $actual_rules, 'rules_synced' => true ) );
 	} elseif ( 'ai-set' === $__nmm_action ) {
 		if ( ! defined( 'NOVAMIRA_VERSION' ) ) {
 			throw new \RuntimeException( 'Novamira Free must be active before its AI settings can be changed.' );
@@ -208,6 +250,8 @@ try {
 			$__nmm_reply( false, array(), 'ai_disabled_by_policy', 'AI access is disabled by the MainWP site policy.' );
 		} elseif ( $is_production && ! $production_allowed ) {
 			$__nmm_reply( false, array(), 'production_not_approved', 'Production gateway access has not been approved for this site.' );
+		} elseif ( function_exists( 'novamira_is_domain_mismatch' ) && novamira_is_domain_mismatch() ) {
+			$__nmm_reply( false, array(), 'novamira_domain_mismatch', 'Re-enable AI in Novamira on this domain before opening gateway access.' );
 		} elseif ( 'manual-only' === $lifecycle && ! $__nmm_manual_enabled() ) {
 			$__nmm_reply( false, array(), 'manual_enable_required', 'Enable Novamira AI abilities manually before using this site.' );
 		} else {
@@ -225,9 +269,10 @@ try {
 			}
 			$changed = 'just-in-time' === $lifecycle && ! $__nmm_manual_enabled();
 			if ( $changed ) {
+				$site_host = function_exists( 'novamira_ai_abilities_site_host' ) ? novamira_ai_abilities_site_host() : (string) wp_parse_url( home_url(), PHP_URL_HOST );
 				update_option( 'novamira_ai_abilities_enabled', '1', false );
-				update_option( 'novamira_ai_abilities_domain', (string) wp_parse_url( home_url(), PHP_URL_HOST ), false );
-				if ( '1' !== get_option( 'novamira_ai_abilities_enabled', '' ) || (string) wp_parse_url( home_url(), PHP_URL_HOST ) !== get_option( 'novamira_ai_abilities_domain', '' ) ) {
+				update_option( 'novamira_ai_abilities_domain', $site_host, false );
+				if ( '1' !== get_option( 'novamira_ai_abilities_enabled', '' ) || $site_host !== get_option( 'novamira_ai_abilities_domain', '' ) ) {
 					$__nmm_reply( false, array(), 'ai_open_persistence_failed', 'The child AI settings could not be persisted.' );
 					return;
 				}

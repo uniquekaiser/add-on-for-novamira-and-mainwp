@@ -4,7 +4,7 @@
 declare( strict_types=1 );
 
 define( 'ABSPATH', __DIR__ . '/tmp-wordpress/' );
-define( 'NOVAMIRA_MAINWP_VERSION', '0.7.2' );
+define( 'NOVAMIRA_MAINWP_VERSION', '0.7.3' );
 define( 'NOVAMIRA_MAINWP_DIR', dirname( __DIR__ ) . '/' );
 define( 'NOVAMIRA_MAINWP_FILE', dirname( __DIR__ ) . '/mainwp-novamira-addon.php' );
 define( 'ARRAY_A', 'ARRAY_A' );
