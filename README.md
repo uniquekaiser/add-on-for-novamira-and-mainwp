@@ -18,6 +18,17 @@ Report bugs, request features, and provide feedback through [GitHub Issues](http
 - [MainWP MCP Bridge 0.3.0 or newer](https://github.com/uniquekaiser/mainwp-mcp-bridge) on the Dashboard
 - An upstream Novamira Free release supported by the add-on (1.11.1 or newer)
 
+## Bulk Novamira 2 settings
+
+In MainWP, open **Add-ons → Add-on for Novamira and MainWP → Novamira Settings**. Search for sites, select the current page or specific sites, then click **Inspect sites** to see approval levels and the available feature IDs. Choose the settings you want to change, click **Preview changes**, and review the results before applying to the sites that passed preview. Each child reports its own result. Fields left on **Keep each site’s setting** retain their current values.
+
+- Manage approval levels, held AI emails, approval instructions, and user context. A changed approval threshold or skip mode can cancel pending requests. AI change history must be active for email holding to take effect.
+- Enable or disable features and specializations through Novamira’s dependency planner. Update an individual ability’s approval choice or enabled state where the child permits it.
+- Toggle Read Mode and Ghost Mode using each child’s existing preferences. Turning either mode on requires compatible, licensed Novamira Pro. Ghost Mode also requires a valid existing owner list that includes the MainWP-connected administrator.
+- Reset approved outbound destinations so future requests can ask again. Approving pending actions, editing Ghost Mode owners, managing connection credentials, and sending or discarding held emails remain separate operations.
+
+The settings tab requires Novamira 2.0 or later on the child. This tab uses the signed MainWP connection and requires a browser session on the Dashboard.
+
 ## Deployment order
 
 1. Install the add-on and [MainWP MCP Bridge](https://github.com/uniquekaiser/mainwp-mcp-bridge) on the Dashboard.

@@ -107,7 +107,232 @@
 		pump();
 	}
 
+
+	function bindSettings() {
+		var $root = $('#nmm-settings');
+		if (!$root.length) {
+			return;
+		}
+		var $status = $('#nmm-settings-status');
+		var $results = $('#nmm-settings-results');
+		var $body = $results.find('tbody');
+		var $apply = $('#nmm-settings-apply');
+		var $scope = $('#nmm-settings-scope');
+		var batch = null;
+		var busy = false;
+		var knownFeatures = new Set();
+		var knownAbilities = new Set();
+
+		function invalidate() {
+			batch = null;
+			$apply.prop('hidden', true);
+		}
+
+		function collectPatch() {
+			var scope = $scope.val();
+			var patch = {};
+			if (scope === 'read_mode') {
+				return { read_mode: $('#nmm-settings-read-mode').val() === 'on' };
+			}
+			if (scope === 'ghost_mode') {
+				return { ghost_mode: $('#nmm-settings-ghost-mode').val() === 'on' };
+			}
+			if (scope === 'reset_destinations') {
+				return { reset_destinations: true };
+			}
+			if (scope !== 'general') {
+				var $fields = $root.find('fieldset[data-nmm-settings-scope="' + scope + '"]');
+				var id = $fields.find('[data-nmm-target-id]').val().trim();
+				var choice = $fields.find('[data-nmm-target-choice]').val();
+				if (!id) {
+					return {};
+				}
+				patch[scope] = scope === 'ability_approval' ? { id: id, choice: choice } : { id: id, enabled: choice === 'on' };
+				return patch;
+			}
+			var level = $('#nmm-approval-level').val();
+			var emails = $('#nmm-hold-emails').val();
+			if (level) {
+				patch.approval_level = level;
+			}
+			if (emails) {
+				patch.hold_emails = emails === 'on';
+			}
+			if ($('#nmm-change-approval-instructions').prop('checked')) {
+				patch.approval_instructions = $('#nmm-approval-instructions').val();
+			}
+			if ($('#nmm-change-user-context').prop('checked')) {
+				patch.user_context = $('#nmm-user-context').val();
+			}
+			return patch;
+		}
+
+		function describe(value) {
+			var levels = { most: 'Ask more', big: 'Balanced', almost_none: 'Ask less', skip: 'Skip approvals', yes: 'Always ask', no: 'Never ask', level: 'Follow approval level' };
+			if (typeof value === 'boolean') {
+				return value ? 'On' : 'Off';
+			}
+			return Object.prototype.hasOwnProperty.call(levels, value) ? levels[value] : (value === '' || value == null ? '(empty)' : String(value));
+		}
+
+		function renderDetails($cell, step, data) {
+			$cell.empty();
+			if (step === 'apply') {
+				$cell.text(data.message || 'Saved.');
+				return;
+			}
+			if (step === 'preview') {
+				var $changes = $('<dl>').appendTo($cell);
+				var labels = {
+					approval_level: 'Approval level',
+					hold_emails: 'Hold AI emails',
+					approval_instructions: 'Approval instructions',
+					user_context: 'User context',
+					read_mode: 'Read Mode',
+					ghost_mode: 'Ghost Mode',
+					approved_destinations: 'Approved destinations'
+				};
+				Object.keys(data.after || {}).forEach(function (key) {
+					$('<dt>').text(Object.prototype.hasOwnProperty.call(labels, key) ? labels[key] : key).appendTo($changes);
+					$('<dd>').css('white-space', 'pre-wrap').text(describe(data.before[key]) + ' → ' + describe(data.after[key])).appendTo($changes);
+				});
+				(data.notes || []).forEach(function (note) {
+					$('<p>').text(note).appendTo($cell);
+				});
+				return;
+			}
+			$('<p>').text('Novamira ' + data.version + ' · ' + describe(data.approval_level) + ' · Email holding ' + describe(data.hold_emails) + ' · Read Mode ' + describe(data.read_mode) + ' · Ghost Mode ' + describe(data.ghost_mode) + ' · Approved destinations ' + data.approved_destinations).appendTo($cell);
+			var $features = $('<ul>').appendTo($cell);
+			Object.keys(data.features || {}).forEach(function (id) {
+				var feature = data.features[id];
+				$('<li>').text(feature.label + ' (' + id + ') · ' + describe(feature.active)).appendTo($features);
+				if (!knownFeatures.has(id)) {
+					$('<option>').val(id).text(feature.label).appendTo('#nmm-feature-ids');
+					knownFeatures.add(id);
+				}
+			});
+			(data.abilities || []).forEach(function (id) {
+				if (!knownAbilities.has(id)) {
+					$('<option>').val(id).appendTo('#nmm-ability-ids');
+					knownAbilities.add(id);
+				}
+			});
+		}
+
+		function run(step, sites, patch) {
+			busy = true;
+			var $controls = $root.find('input, button, select, textarea').filter(':enabled');
+			$controls.prop('disabled', true);
+			$results.prop('hidden', false);
+			$body.empty();
+			var pending = sites.map(function (site) {
+				var $row = $('<tr>').append($('<th scope="row">').text(site.name));
+				site.$cell = $('<td>').text('Waiting').appendTo($row);
+				$body.append($row);
+				return site;
+			});
+			var finished = 0;
+			var ready = [];
+			var active = 0;
+			function pump() {
+				while (active < maxWorkers && pending.length) {
+					execute(pending.shift());
+				}
+			}
+			function execute(site) {
+				active++;
+				site.$cell.text('Contacting child site…');
+				var payload = { step: step, patch: patch };
+				if (step === 'apply') {
+					payload.revision = site.preview.revision;
+					payload.confirmation_token = site.preview.confirmation_token;
+				}
+				$.ajax({
+					url: settings.ajaxUrl || window.ajaxurl,
+					method: 'POST',
+					dataType: 'json',
+					timeout: 120000,
+					data: { action: 'novamira_mainwp_settings', nonce: settings.bulkNonce, site_id: site.id, settings: JSON.stringify(payload) }
+				}).done(function (response) {
+					if (!response || !response.success) {
+						site.$cell.text((response && response.data && response.data.message) || 'Request failed.');
+						return;
+					}
+					renderDetails(site.$cell, step, response.data);
+					if (step === 'preview') {
+						site.preview = response.data;
+					}
+					ready.push(site);
+				}).fail(function (xhr, status) {
+					site.$cell.text(errorMessage(xhr, status));
+				}).always(function () {
+					active--;
+					finished++;
+					$status.text(finished + ' / ' + sites.length + ' sites processed. ' + ready.length + ' succeeded.');
+					if (finished === sites.length) {
+						busy = false;
+						$controls.prop('disabled', false);
+						if (step === 'preview' && ready.length) {
+							batch = { sites: ready, patch: patch };
+							$apply.prop('hidden', false).text('Apply to ' + ready.length + (ready.length === 1 ? ' site' : ' sites'));
+						}
+					}
+					pump();
+				});
+			}
+			pump();
+		}
+
+		function selection() {
+			var sites = selectedSites('.nmm-settings-site:enabled');
+			if (!sites.length) {
+				$status.text(settings.selectSites || 'Select at least one site.');
+			}
+			return sites;
+		}
+		$root.on('input change', 'input:not([type="search"]), select, textarea', invalidate);
+		$scope.on('change', function () {
+			$root.find('[data-nmm-settings-scope]').each(function () {
+				this.hidden = this.dataset.nmmSettingsScope !== $scope.val();
+			});
+		});
+		$('#nmm-settings-all').on('change', function () {
+			$('.nmm-settings-site:enabled').prop('checked', this.checked);
+		});
+		$root.on('change', '.nmm-settings-site', function () {
+			var $sites = $('.nmm-settings-site:enabled');
+			var checked = $sites.filter(':checked').length;
+			$('#nmm-settings-all').prop('checked', !!checked && checked === $sites.length).prop('indeterminate', !!checked && checked < $sites.length);
+		});
+		$('#nmm-settings-inspect').on('click', function () {
+			var sites = selection();
+			if (!busy && sites.length) {
+				invalidate();
+				run('inspect', sites, {});
+			}
+		});
+		$('#nmm-settings-form').on('submit', function (event) {
+			event.preventDefault();
+			var sites = selection();
+			var patch = collectPatch();
+			if (!busy && sites.length && Object.keys(patch).length) {
+				invalidate();
+				run('preview', sites, patch);
+			} else if (sites.length && !Object.keys(patch).length) {
+				$status.text('Choose at least one setting to change.');
+			}
+		});
+		$apply.on('click', function () {
+			if (!busy && batch) {
+				var approved = batch;
+				invalidate();
+				run('apply', approved.sites, approved.patch);
+			}
+		});
+	}
+
 	$(function () {
+		bindSettings();
 		var bulkIntent = null;
 		var $bulkOperation = $('#nmm-bulk-operation');
 		if (!$bulkOperation.find('option[value="activate-pro-license"]').length) {

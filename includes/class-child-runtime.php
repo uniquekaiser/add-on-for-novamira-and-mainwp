@@ -43,6 +43,7 @@ $__nmm_reply   = static function ( $ok, $data = array(), $code = '', $message = 
 	}
 	echo "\n" . $__nmm_marker . base64_encode( wp_json_encode( $body ) ) . "\n";
 };
+__NMM_OPERATION__
 $__nmm_plugin_state = static function ( $plugins, $file ) {
 	return array(
 		'installed' => isset( $plugins[ $file ] ),
@@ -329,7 +330,15 @@ try {
 }
 PHP;
 
-		$source  = str_replace( '__NMM_PAYLOAD__', $payload, $script );
+		$settings_action = in_array( $action, array( 'settings-inspect', 'settings-preview', 'settings-apply' ), true );
+		$source          = strtr(
+			$script,
+			array(
+				'__NMM_PAYLOAD__'   => $payload,
+				'__NMM_OPERATION__' => $settings_action ? Child_Settings::source() : '',
+			)
+		);
+
 		$encoded = base64_encode( $source ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Protecting fixed source from form-transport slash normalization.
 		$invalid = base64_encode( // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Fixed error envelope for an impossible decode failure.
 			wp_json_encode(

@@ -2,6 +2,12 @@
 
 All notable changes to Add-on for Novamira and MainWP are documented here.
 
+## 0.8.0 - 2026-11-26
+
+- [NEW] Inspect and bulk configure Novamira 2 approval levels, held emails, approval instructions, user context, features, specializations, individual abilities, Read Mode, and Ghost Mode from the MainWP Dashboard.
+- [NEW] Reset previously approved outbound destinations on selected children.
+- [SECURITY] Bind each settings confirmation to the selected child, reviewed values, administrator, and browser session. Refuse stale previews and respect child restrictions and license requirements.
+
 ## 0.7.3 - 2026-11-21
 
 - [FIX] Reject MCP endpoint fragments consistently on PHP 7.4 and later.

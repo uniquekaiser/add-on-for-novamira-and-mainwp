@@ -192,6 +192,7 @@ final class Admin {
 				<?php
 				foreach ( array(
 					'fleet'    => array( 'Fleet', 'sitemap' ),
+					'settings' => array( 'Novamira Settings', 'sliders horizontal' ),
 					'connect'  => array( 'Connect', 'linkify' ),
 					'policies' => array( 'Policies', 'shield alternate' ),
 					'packages' => array( 'Packages', 'box' ),
@@ -215,7 +216,9 @@ final class Admin {
 			</div>
 			<?php self::render_result(); ?>
 			<?php
-			if ( 'connect' === $tab ) {
+			if ( 'settings' === $tab ) {
+				Settings_Admin::render();
+			} elseif ( 'connect' === $tab ) {
 				self::render_connect();
 			} elseif ( 'policies' === $tab ) {
 				self::render_policies();
