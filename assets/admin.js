@@ -118,14 +118,29 @@
 		var $body = $results.find('tbody');
 		var $apply = $('#nmm-settings-apply');
 		var $scope = $('#nmm-settings-scope');
+		var $selectAll = $('#nmm-settings-all');
+		var $selectedCount = $('#nmm-settings-selected-count');
 		var batch = null;
 		var busy = false;
 		var knownFeatures = new Set();
 		var knownAbilities = new Set();
 
 		function invalidate() {
+			if (batch) {
+				$status.empty();
+				$body.empty();
+				$results.prop('hidden', true);
+			}
 			batch = null;
 			$apply.prop('hidden', true);
+		}
+
+		function updateSelection() {
+			var $sites = $root.find('.nmm-settings-site:enabled');
+			var checked = $sites.filter(':checked').length;
+			$selectAll.prop('checked', checked > 0 && checked === $sites.length)
+				.prop('indeterminate', checked > 0 && checked < $sites.length);
+			$selectedCount.text(checked);
 		}
 
 		function collectPatch() {
@@ -296,14 +311,12 @@
 				this.hidden = this.dataset.nmmSettingsScope !== $scope.val();
 			});
 		});
-		$('#nmm-settings-all').on('change', function () {
-			$('.nmm-settings-site:enabled').prop('checked', this.checked);
+		$selectAll.on('change', function () {
+			$root.find('.nmm-settings-site:enabled').prop('checked', this.checked);
+			updateSelection();
 		});
-		$root.on('change', '.nmm-settings-site', function () {
-			var $sites = $('.nmm-settings-site:enabled');
-			var checked = $sites.filter(':checked').length;
-			$('#nmm-settings-all').prop('checked', !!checked && checked === $sites.length).prop('indeterminate', !!checked && checked < $sites.length);
-		});
+		$root.on('change', '.nmm-settings-site', updateSelection);
+		updateSelection();
 		$('#nmm-settings-inspect').on('click', function () {
 			var sites = selection();
 			if (!busy && sites.length) {

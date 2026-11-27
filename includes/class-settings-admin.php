@@ -47,7 +47,11 @@ final class Settings_Admin {
 		?>
 		<section id="nmm-settings">
 			<h2><?php esc_html_e( 'Novamira settings', 'mainwp-novamira-addon' ); ?></h2>
-			<p><?php esc_html_e( 'Select sites, then preview the settings you want to change. Select Inspect sites to see each site’s approval level and feature IDs.', 'mainwp-novamira-addon' ); ?></p>
+			<p><?php esc_html_e( 'Choose the settings and sites to update, then preview your changes. Use Inspect sites to read current settings.', 'mainwp-novamira-addon' ); ?></p>
+			<?php self::render_form(); ?>
+			<datalist id="nmm-feature-ids"></datalist>
+			<datalist id="nmm-ability-ids"></datalist>
+			<h3><?php esc_html_e( 'Sites', 'mainwp-novamira-addon' ); ?></h3>
 			<form method="get" class="ui form">
 				<input type="hidden" name="page" value="Extensions-Mainwp-Novamira-Addon">
 				<input type="hidden" name="tab" value="settings">
@@ -55,6 +59,18 @@ final class Settings_Admin {
 				<input type="search" id="nmm-settings-search" name="search" value="<?php echo esc_attr( $search ); ?>">
 				<button type="submit" class="ui button"><?php esc_html_e( 'Search', 'mainwp-novamira-addon' ); ?></button>
 			</form>
+			<div class="ui secondary segment nmm-actions">
+				<button type="button" class="ui button" id="nmm-settings-inspect"><?php esc_html_e( 'Inspect sites', 'mainwp-novamira-addon' ); ?></button>
+				<button type="submit" class="ui primary button" form="nmm-settings-form"><?php esc_html_e( 'Preview changes', 'mainwp-novamira-addon' ); ?></button>
+				<span class="ui basic label" aria-live="polite"><?php esc_html_e( 'Selected sites', 'mainwp-novamira-addon' ); ?> <strong id="nmm-settings-selected-count">0</strong></span>
+			</div>
+			<p id="nmm-settings-status" role="status"></p>
+			<table id="nmm-settings-results" class="ui compact celled table" hidden>
+				<thead><tr><th scope="col"><?php esc_html_e( 'Site', 'mainwp-novamira-addon' ); ?></th><th scope="col"><?php esc_html_e( 'Result', 'mainwp-novamira-addon' ); ?></th></tr></thead>
+				<tbody></tbody>
+			</table>
+			<button type="button" class="ui primary button" id="nmm-settings-apply" hidden><?php esc_html_e( 'Apply previewed changes', 'mainwp-novamira-addon' ); ?></button>
+			<noscript><p><?php esc_html_e( 'Enable JavaScript to preview and apply bulk settings.', 'mainwp-novamira-addon' ); ?></p></noscript>
 			<table class="ui compact table">
 				<thead><tr><th scope="col"><input id="nmm-settings-all" type="checkbox" aria-label="<?php esc_attr_e( 'Select all sites on this page', 'mainwp-novamira-addon' ); ?>"></th><th scope="col"><?php esc_html_e( 'Site', 'mainwp-novamira-addon' ); ?></th></tr></thead>
 				<tbody>
@@ -73,17 +89,6 @@ final class Settings_Admin {
 			<?php if ( 50 === count( $sites ) ) : ?>
 				<a class="ui button" href="<?php echo esc_url( add_query_arg( 'settings_page', $page + 1, $url ) ); ?>"><?php esc_html_e( 'Next sites', 'mainwp-novamira-addon' ); ?></a>
 			<?php endif; ?>
-			<button type="button" class="ui button" id="nmm-settings-inspect"><?php esc_html_e( 'Inspect sites', 'mainwp-novamira-addon' ); ?></button>
-			<?php self::render_form(); ?>
-			<datalist id="nmm-feature-ids"></datalist>
-			<datalist id="nmm-ability-ids"></datalist>
-			<p id="nmm-settings-status" role="status"></p>
-			<table id="nmm-settings-results" class="ui compact celled table" hidden>
-				<thead><tr><th scope="col"><?php esc_html_e( 'Site', 'mainwp-novamira-addon' ); ?></th><th scope="col"><?php esc_html_e( 'Result', 'mainwp-novamira-addon' ); ?></th></tr></thead>
-				<tbody></tbody>
-			</table>
-			<button type="button" class="ui primary button" id="nmm-settings-apply" hidden><?php esc_html_e( 'Apply previewed changes', 'mainwp-novamira-addon' ); ?></button>
-			<noscript><p><?php esc_html_e( 'Enable JavaScript to preview and apply bulk settings.', 'mainwp-novamira-addon' ); ?></p></noscript>
 		</section>
 		<?php
 	}
@@ -169,7 +174,6 @@ final class Settings_Admin {
 				)
 			);
 			?>
-			<button type="submit" class="ui button"><?php esc_html_e( 'Preview changes', 'mainwp-novamira-addon' ); ?></button>
 		</form>
 		<?php
 	}

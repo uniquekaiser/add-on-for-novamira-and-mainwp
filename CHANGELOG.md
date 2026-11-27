@@ -2,6 +2,11 @@
 
 All notable changes to Add-on for Novamira and MainWP are documented here.
 
+## 0.8.1 - 2026-11-27
+
+- [IMPROVE] Show Novamira settings, the selected site count, and inspection and preview results above the site list.
+- [FIX] Clear the previous preview when the selected sites or settings change.
+
 ## 0.8.0 - 2026-11-26
 
 - [NEW] Inspect and bulk configure Novamira 2 approval levels, held emails, approval instructions, user context, features, specializations, individual abilities, Read Mode, and Ghost Mode from the MainWP Dashboard.

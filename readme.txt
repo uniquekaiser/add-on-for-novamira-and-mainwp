@@ -4,7 +4,7 @@ Tags: mainwp, mcp, ai, fleet-management
 Requires at least: 6.9
 Tested up to: 7.1.4
 Requires PHP: 7.4
-Stable tag: 0.8.0
+Stable tag: 0.8.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -43,6 +43,10 @@ Version 0.7.2 includes the security controls described here. Destructive MCP cal
 Free package deployment requires an independently authenticated version/hash/URL pin. Plaintext credential export is disabled by default and requires explicit site selection and recent-authentication integration. Child endpoints must match the managed origin; exceptions require administrator-owned configuration. See SECURITY-REMEDIATION.md for required configuration and verification boundaries.
 
 == Changelog ==
+
+= 0.8.1 =
+* [IMPROVE] Show Novamira settings, the selected site count, and inspection and preview results above the site list.
+* [FIX] Clear the previous preview when the selected sites or settings change.
 
 = 0.8.0 =
 * [NEW] Bulk configure Novamira 2 approval levels, held emails, instructions, context, features, specializations, individual abilities, Read Mode, and Ghost Mode.
